@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2042
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NorthwindServer", "NorthwindServer\NorthwindServer.csproj", "{B19DE4D6-D142-4175-AAEC-E7D9EE5B5AC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NorthwindModel", "NorthwindModel\NorthwindModel.csproj", "{B4582425-FFAC-49BE-8AA4-15530A260853}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B19DE4D6-D142-4175-AAEC-E7D9EE5B5AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B19DE4D6-D142-4175-AAEC-E7D9EE5B5AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B19DE4D6-D142-4175-AAEC-E7D9EE5B5AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B19DE4D6-D142-4175-AAEC-E7D9EE5B5AC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4582425-FFAC-49BE-8AA4-15530A260853}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4582425-FFAC-49BE-8AA4-15530A260853}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4582425-FFAC-49BE-8AA4-15530A260853}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4582425-FFAC-49BE-8AA4-15530A260853}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CC6502AD-9394-427D-8BAD-52C6CACB6F2E}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,26 @@
+<p>customer works!</p>
+
+<table>
+  <tr *ngFor="let cust of customers" (click)="selected = cust"
+    [ngStyle]="{'background-color': selected === cust ? 'lightgray':'white'}">
+    <td>{{cust.firstName}} {{cust.lastName}}</td>
+    <td>{{cust.entityAspect.entityState}}</td>
+  </tr>
+</table>
+<button type="button" (click)="addCustomer()">Add</button>
+
+<div *ngIf="selected && !selected.entityAspect.entityState.isDeleted()">
+  <h3>Edit</h3>
+  <div>First Name: <input type="text" name="firstName" [(ngModel)]="selected.firstName"></div>
+  <div>Last Name: <input type="text" name="lastName" [(ngModel)]="selected.lastName"></div>
+  <div>City: <input type="text" name="city" [(ngModel)]="selected.city"></div>
+  <div>Country: <input type="text" name="country" [(ngModel)]="selected.country"></div>
+  <div>Phone: <input type="text" name="phone" [(ngModel)]="selected.phone"></div>
+  <button type="button" (click)="delete(selected)">Delete</button>
+</div>
+
+<div *ngIf="manager.hasChanges()">
+  <hr>
+  <button type="button" (click)="saveChanges()">Save Changes</button>
+  <button type="button" (click)="rejectChanges()">Revert Changes</button>
+</div>
