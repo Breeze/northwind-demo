@@ -401,7 +401,7 @@ Now we'll add Breeze to the app, so we can query entities from the server and up
 
 Start by adding the npm packages.  In the `NorthwindClient` directory, run:
 
-`npm install breeze-client@next breeze-bridge2-angular breeze-entity-generator`
+`npm install breeze-client@next breeze-entity-generator`
 
 ## Generate Entities
 
@@ -484,11 +484,11 @@ Edit `NorthwindClient\src\app\app.module.ts`.  At the top of the file, add the f
 ```
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { config, NamingConvention } from 'breeze-client';
+import { NamingConvention } from 'breeze-client';
 import { DataServiceWebApiAdapter } from 'breeze-client/adapter-data-service-webapi';
 import { ModelLibraryBackingStoreAdapter } from 'breeze-client/adapter-model-library-backing-store';
 import { UriBuilderJsonAdapter } from 'breeze-client/adapter-uri-builder-json';
-import { AjaxHttpClientAdapter } from 'breeze-bridge2-angular';
+import { AjaxHttpClientAdapter } from 'breeze-client/adapter-ajax-httpclient';
 ```
 Add `HttpClientModule` and `FormsModule` to the `imports` section of the `@NgModule` declaration:
 ```
@@ -507,11 +507,9 @@ export class AppModule {
     // Configure Breeze adapters
     ModelLibraryBackingStoreAdapter.register();
     UriBuilderJsonAdapter.register();
-    config.registerAdapter('ajax', function() { return new AjaxHttpClientAdapter(http); } as any);
-    config.initializeAdapterInstance('ajax', AjaxHttpClientAdapter.adapterName, true);
+    AjaxHttpClientAdapter.register(http);
     DataServiceWebApiAdapter.register();
     NamingConvention.camelCase.setAsDefault();
-    config.initializeAdapterInstance('uriBuilder', 'json');
   }
 }
 ```
@@ -519,7 +517,7 @@ That's a lot of adapters!  Let's look at what they do:
  - `ModelLibraryBackingStoreAdapter` stores data in entities in a way that is compatible with Angular
  - `UriBuilderJsonAdapter` encodes Breeze queries in JSON format in query URIs
  - `AjaxHttpClientAdapter` uses Angular's HttpClient for performing AJAX requests
- - `DataServiceWebApiAdapter` handles responses from WebAPI and similar backends
+ - `DataServiceWebApiAdapter` turns server responses into Breeze entities
  - `NamingConvention` sets how Breeze converts entity property names between client and server
 
 ## Create the environment settings
