@@ -19,7 +19,16 @@ queries and updates data.  Along the way we will:
 - Create a component to read and update entities
 
 This is an opinionated approach -- the "productivity path" -- that 
-[IdeaBlade](https://www.ideablade.com/) has found works well for many projects.  It includes generating entity classes for both server and client side.
+[IdeaBlade](https://www.ideablade.com/) has found works well for many projects.  It includes generating entity classes for both server and client side, so that client and server have a shared understanding of the entity model.
+
+The overall steps for creating our application:
+
+1. Create the directory structure
+2. Create the database
+3. Create the server ([.NET Core](./STEPS-Server-Core.md) or NodeJS)
+4. Create the client ([Angular](./STEPS-Client-Angular), React, or Vue)
+
+Let's get started!
 
 ## Create the directory
 
@@ -53,6 +62,6 @@ The scripts assume MS SQL Server or SQL Express.  If you are using a different d
 
 Next we'll work on the API server.  
 
-See [STEPS-CoreServer](./STEPS-CoreServer.html) for creating a .NET Core server.
+See [STEPS-Server-Core](./STEPS-Server-Core.md) for creating a .NET Core server.
 
-<!-- See [STEPS-NodeServer](./STEPS-NodeServer.html) for creating a NodeJS server. -->
+<!-- See [STEPS-Server-Node](./STEPS-Server-Node.md) for creating a NodeJS server. -->

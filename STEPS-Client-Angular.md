@@ -1,10 +1,8 @@
 # Steps for creating a Breeze Angular App
 
-Here are some steps to follow to create a new Angular 8 application, using Breeze to handle the data management.
+Here are some steps to follow to create a new [Angular](https://angular.io) 8 application, using Breeze to handle the data management.
 
-We will assume that you've already got the server side created, by following the
-[STEPS-CoreServer](./STEPS-CoreServer.html) document for a .NET Core server.
-<!-- or the [STEPS-NodeServer](./STEPS-NodeServer.html) document for a NodeJS server. -->
+We will assume that you've already got the server side created, following the outline described in the [STEPS](STEPS.md) document.
 
 For the client, we will start with an empty directory and build an application that
 talks to the server, using Breeze to query and update data.
@@ -42,7 +40,7 @@ Now we'll add Breeze to the app, so we can query entities from the server and up
 
 Start by adding the npm packages.  In the `NorthwindClient` directory, run:
 
-`npm install breeze-client@next breeze-entity-generator`
+`npm install breeze-client breeze-entity-generator`
 
 ## Generate Entities
 
