@@ -12,24 +12,27 @@ export class EntityManagerProvider {
   protected masterManager: EntityManager;
 
   constructor() {
-
+    // configure breeze adapters
     ModelLibraryBackingStoreAdapter.register();
     UriBuilderJsonAdapter.register();
     AjaxFetchAdapter.register();
     DataServiceWebApiAdapter.register();
     NamingConvention.camelCase.setAsDefault();
 
+    // configure API endpoint
     const dataService = new DataService({
       serviceName: "http://localhost:26842/api/breeze",
       hasServerMetadata: false
     });
 
+    // register entity metadata
     this.masterManager = new EntityManager({ dataService });
     const metadataStore = this.masterManager.metadataStore;
     metadataStore.importMetadata(NorthwindMetadata.value);
     NorthwindRegistrationHelper.register(metadataStore);
   }
 
+  /** Return empty manager configured with dataservice and metadata */
   newManager(): EntityManager {
     return this.masterManager.createEmptyCopy();
   }
@@ -41,7 +44,7 @@ export class EntityManagerProvider {
         component.forceUpdate();
       }
     });
-    component[subid] = subid;
+    component["subid"] = subid;
   }
 
   /** Remove subscription created with subscribeComponent() */

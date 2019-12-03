@@ -32,6 +32,8 @@ Now you should have a `NorthwindCore/NorthwindClient` directory containing the A
 
 This will compile the app and open a browser on http://localhost:4200 with a welcome page.  
 
+You can learn more about the app structure in the [Angular workspace documentation](https://angular.io/guide/file-structure)
+
 Stop the server from the command line using Ctrl-C.
 
 ## Add Breeze packages
@@ -47,6 +49,7 @@ Start by adding the npm packages.  In the `NorthwindClient` directory, run:
 When developing our app, it's helpful to have TypeScript classes to represent the entity data that comes from the server.  The data is in the form of Breeze entities, so we will first create a base class to represent that.
 
 #### Create the base class
+
 In the `NorthwindClient/src/app` directory, create a new directory, `model`.  
 
 Then, in `NorthwindClient/src/app/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:

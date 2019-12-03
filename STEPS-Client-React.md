@@ -1,0 +1,568 @@
+# Steps for creating a Breeze React App
+
+Here we are going to create a new [React](https://reactjs.org/) application, using Breeze to handle the data management.
+
+We will assume that you've already got the server side created, following the outline described in the [STEPS](STEPS.md) document.
+
+For the client, we will start with an empty directory and build an application that
+talks to the server, using Breeze to query and update data.
+
+Along the way we will:
+
+- Create a React application using the CLI
+- Create TypeScript entity classes from the server metadata
+- Create a React component to read and update entities
+
+# Create the React App
+
+To create the initial shell of the React app, we will use the React CLI as instructed in the [React docs](https://reactjs.org/docs/create-a-new-react-app.html#create-react-app).
+
+First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.npmjs.com/) installed.
+
+Next, open a command prompt in the `NorthwindCore` directory, and follow the steps below:
+
+1. `npx create-react-app northwind-rrr --typescript --use-npm`
+
+Now you should have a `NorthwindCore/northwind-react` directory containing the React app.  Try it out:
+
+`cd northwind-react`
+`npm start`
+
+This will compile the app and open a browser on http://localhost:3000 with a welcome page.  
+
+You can learn more about the app structure in the [Create React App documentation](https://create-react-app.dev/docs/getting-started).
+
+Stop the server from the command line using Ctrl-C.
+
+## Add Breeze packages
+
+Now we'll add Breeze to the app, so we can query entities from the server and update them.
+
+Start by adding the npm packages.  In the `northwind-react` directory, run:
+
+`npm install breeze-client breeze-entity-generator`
+
+## Generate Entities
+
+When developing our app, it's helpful to have TypeScript classes to represent the entity data that comes from the server.  The data is in the form of Breeze entities, so we will first create a base class to represent that.
+
+#### Create the base class
+
+In the `northwind-react/src` directory, create a new directory, `model`.  
+
+Then, in `northwind-react/src/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
+```
+import { Entity, EntityAspect, EntityType } from "breeze-client";
+import { ChangeEvent } from "react";
+
+export class BaseEntity implements Entity {
+  entityAspect: EntityAspect;
+  entityType: EntityType;
+
+  /** Update entity property with the value from the event */
+  handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const target = event.target;
+    const name = target.name;
+    const value = (target.type === "checkbox" || target.type === "radio") ? target.checked : target.value;
+    this[name] = value;
+  }
+  constructor() {
+    this.handleChange = this.handleChange.bind(this);
+  }
+}
+```
+The `handleChange` method sets property values in the entity based on input changes.  It will be called from our editing component.
+
+When we generate the entities, we will tell the entity generator to use this base class.
+
+#### Generate metadata from server
+
+You should already have a `metadata.json` file in the `NorthwindServer` project directory. 
+If you don't, see the "Generate the metadata" topic in the server document.
+
+#### Generate entities from metadata
+To turn the metadata into entities, we need to write a script.  In the `northwind-react` directory,
+create a file called `generate-entities.js`.
+
+Fill `generate-entities.js` with the following:
+```
+const tsGen = require('breeze-entity-generator/tsgen-core');
+const fs = require('fs');
+const dir = './src/model';
+
+if (!fs.existsSync(dir)){
+    fs.mkdirSync(dir);
+}
+
+tsGen.generate({
+  inputFileName: '../NorthwindServer/metadata.json',
+  outputFolder: dir,
+  camelCase: true,
+  baseClassName: 'BaseEntity',
+  kebabCaseFileNames: true,
+  codePrefix: 'Northwind'
+});
+```
+Then run the file with
+
+`node generate-entities.js`
+
+This should create files in the `northwind-react/src/model` directory:
+```
+customer.ts
+entity-model.ts
+metadata.ts
+order-item.ts
+order.ts
+product.ts
+registration-helper.ts
+supplier.ts
+```
+These are the entity classes, plus the metadata and the registration-helper that we will use later.
+
+_Note that you can customize the entity output by changing the parameters to the `generate` function, 
+and by changing the template files.  See `node_modules/breeze-entity-generator/README.md` for more information._
+
+## Configure App Module
+
+Now we need to register the Breeze adapters to work with React.  
+
+Edit `northwind-react\src\app\app.module.ts`.  At the top of the file, add the following imports:
+```
+import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { NamingConvention } from 'breeze-client';
+import { DataServiceWebApiAdapter } from 'breeze-client/adapter-data-service-webapi';
+import { ModelLibraryBackingStoreAdapter } from 'breeze-client/adapter-model-library-backing-store';
+import { UriBuilderJsonAdapter } from 'breeze-client/adapter-uri-builder-json';
+import { AjaxHttpClientAdapter } from 'breeze-client/adapter-ajax-httpclient';
+```
+Add `HttpClientModule` and `FormsModule` to the `imports` section of the `@NgModule` declaration:
+```
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    HttpClientModule,
+    FormsModule
+  ],
+```
+
+In the class declaration at the bottom of the file, add the constructor:
+```
+export class AppModule {
+  constructor(http: HttpClient) {
+    // Configure Breeze adapters
+    ModelLibraryBackingStoreAdapter.register();
+    UriBuilderJsonAdapter.register();
+    AjaxHttpClientAdapter.register(http);
+    DataServiceWebApiAdapter.register();
+    NamingConvention.camelCase.setAsDefault();
+  }
+}
+```
+That's a lot of adapters!  Let's look at what they do:
+ - `ModelLibraryBackingStoreAdapter` stores data in entities in a way that is compatible with React
+ - `UriBuilderJsonAdapter` encodes Breeze queries in JSON format in query URIs
+ - `AjaxHttpClientAdapter` uses React's HttpClient for performing AJAX requests
+ - `DataServiceWebApiAdapter` turns server responses into Breeze entities
+ - `NamingConvention` sets how Breeze converts entity property names between client and server
+
+## Create the environment settings
+
+The client application needs to know the URL to reach the server.  This sort of this is environment-specific,
+so we'll keep it in the `environment.ts` file.
+
+Edit `src/environments/environment.ts` and add a line for breezeApiRoot.  The port should be the one
+on which your NorthwindServer is listening, and the path is the path to your BreezeController.
+```
+export const environment = {
+  production: false,
+  breezeApiRoot: 'http://localhost:33028/api/breeze'
+};
+```
+
+## Create the EntityManagerProvider
+
+In a Breeze application, the [EntityManager](http://breeze.github.io/doc-js/entitymanager-and-caching.html) caches the
+entities and keeps track of the changes.  You may need more than one, if you want to keep multiple change sets.  To make
+it easy, we will create a service called the EntityManagerProvider.
+
+_For simplicity, we'll put this in the `model` folder that we created above.  In a real project, you might want to create
+a separate subdirectory for services._
+
+Create the file `northwind-react/src/model/entity-manager-provider.ts`.  In the file, put:
+```
+import { DataService, EntityManager, NamingConvention, EntityAction } from "breeze-client";
+import { AjaxFetchAdapter } from "breeze-client/adapter-ajax-fetch";
+import { DataServiceWebApiAdapter } from "breeze-client/adapter-data-service-webapi";
+import { ModelLibraryBackingStoreAdapter } from "breeze-client/adapter-model-library-backing-store";
+import { UriBuilderJsonAdapter } from "breeze-client/adapter-uri-builder-json";
+
+import { NorthwindMetadata } from "./metadata";
+import { NorthwindRegistrationHelper } from "./registration-helper";
+
+export class EntityManagerProvider {
+
+  protected masterManager: EntityManager;
+
+  constructor() {
+    // configure breeze adapters
+    ModelLibraryBackingStoreAdapter.register();
+    UriBuilderJsonAdapter.register();
+    AjaxFetchAdapter.register();
+    DataServiceWebApiAdapter.register();
+    NamingConvention.camelCase.setAsDefault();
+
+    // configure API endpoint
+    const dataService = new DataService({
+      serviceName: "http://localhost:26842/api/breeze",
+      hasServerMetadata: false
+    });
+
+    // register entity metadata
+    this.masterManager = new EntityManager({ dataService });
+    const metadataStore = this.masterManager.metadataStore;
+    metadataStore.importMetadata(NorthwindMetadata.value);
+    NorthwindRegistrationHelper.register(metadataStore);
+  }
+
+  /** Return empty manager configured with dataservice and metadata */
+  newManager(): EntityManager {
+    return this.masterManager.createEmptyCopy();
+  }
+
+  /** Call forceUpdate() on the component when an entity property changes */
+  subscribeComponent(manager: EntityManager, component: { forceUpdate: () => void }) {
+    let subid = manager.entityChanged.subscribe((data: { entityAction: EntityAction }) => {
+      if (data.entityAction === EntityAction.PropertyChange) {
+        component.forceUpdate();
+      }
+    });
+    component["subid"] = subid;
+  }
+
+  /** Remove subscription created with subscribeComponent() */
+  unsubscribeComponent(manager: EntityManager, component: any) {
+    if (component.subid) {
+      manager.entityChanged.unsubscribe(component.subid);
+    }
+  }
+}
+
+export const entityManagerProvider = new EntityManagerProvider();
+```
+
+That's a lot of code, so let's break it down.
+
+- The constructor configures Breeze adapters to work with a React app and our server's API conventions.
+- The constructor then creates a `masterManager` and configures it with our entity metadata and server address.  You will need to update the `serviceName` to match your server's breeze endpoint.
+- The `newManager` method returns a new, empty `EntityManager`, configured like the `masterManager`.
+- The `subscribeComponent` method hooks a component into the entity life-cycle.  It tells the component to update its view whenever an entity property changes.  React only re-renders the parts of the view that have actually changed.
+- The `unsubscribeComponent` method removes the component subscription from the EntityManager.
+
+We will use the EntityManagerProvider in our component.
+
+## Create the Customer component
+
+Now create a component to display some customer data.  In the `src` directory, create a file called `Customers.tsx`.
+
+Populate the file with the following:
+```
+import React from 'react';
+
+export class Customers extends React.Component {
+
+  render() {
+    return (
+      <div>
+        <h1>Customers</h1>
+      </div>
+    );
+  }
+}
+```
+This is just the beginning of our component.  We'll be adding more to it soon.
+
+## Show the Customer component
+
+The new component won't display yet because there is no way to get to it.  We will fix that by changing the App component to show it.
+
+Edit `App.tsx`.  Remove the existing code, and make it return a `div` displaying our customer component:
+```
+import React from 'react';
+import './App.css';
+import { Customers } from './Customers';
+
+const App: React.FC = () => {
+  return (
+    <div className="App">
+      <Customers />
+    </div>
+  );
+}
+
+export default App;
+```
+
+Try it now: if the app is not already running, open a command prompt in the `northwind-react` directory and run:
+
+`npm start`
+
+Then open your browser to [http://localhost:3000/](http://localhost:3000/).  You should see a screen that says "**Customers**" in large text.
+
+### Start the server
+
+Start the `NorthwindServer` project now, so it will be available to serve data requests.  If you haven't created the `NorthwindServer`,
+refer back to the [STEPS](STEPS.md) document.
+
+## Get Customer data
+
+Let's use our Customers component to display some customer data using Breeze.
+
+#### State and EntityManager
+
+We'll start by defining the interface for the `state` that our component will manipulate.  We'll call the interface `CustState`,
+and give it two properties: a list of customers, and a selected customer:
+```
+import { Customer } from './model/customer';
+import { entityManagerProvider } from './model/entity-manager-provider';
+import { EntityManager, EntityQuery } from 'breeze-client';
+
+interface CustState {
+  customers: Customer[];
+  selected: Customer;
+}
+```
+Change the component declaration to say that it is using `CustState`, and add a field for an `EntityManager` instance:
+```
+export class Customers extends React.Component<any, CustState> {
+
+    manager: EntityManager;
+```
+Create a constructor for the class, which initializes the state and the manager:
+```
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      customers: [] as Customer[],
+      selected: null as Customer
+    };
+    this.manager = entityManagerProvider.newManager();
+  }
+```
+
+#### Lifecycle Events
+
+When our component is mounted (placed into the component tree), we want to subscribe to changes in the EntityManager.
+This will let our component be updated when data is loaded or changed.
+We will subscribe in the [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount) method.
+
+```
+  componentDidMount() {
+    entityManagerProvider.subscribeComponent(this.manager, this);
+  }
+```
+We then need to unsubscribe when the component is unmounted, via the [componentWillUnmount](https://reactjs.org/docs/react-component.html#componentwillunmount) method:
+```
+  componentWillUnmount() {
+    entityManagerProvider.unsubscribeComponent(this.manager, this);
+  }
+```
+
+#### Query the Customers
+
+Now we will add a Breeze query.  When the component mounts, we will query a list of customers from the server, and update
+the component's `state` with the new data.  The [executeQuery](http://breeze.github.io/doc-js/api-docs/classes/entitymanager.html#executequery)
+method returns a Promise, so we'll update the `state` when the Promise is fullfilled.
+
+Update the [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount) method to add the query lines:
+```
+  componentDidMount() {
+    entityManagerProvider.subscribeComponent(this.manager, this);
+
+    const query = new EntityQuery("Customers").where("lastName", "startsWith", "C").expand("orders");
+    this.manager.executeQuery(query).then(qr => {
+      this.setState({
+        customers: qr.results
+      });
+    });
+  }
+```
+Note that, to keep the display size small, we've used the Breeze query syntax to limit the results to just those customers whose `lastName` starts with "C".
+There are many examples of Breeze queries in the [Breeze documentation](http://breeze.github.io/doc-js/query-examples.html).
+
+#### Display the Customers
+
+Now we need to change the `render` method to display the customers that are in the component's `state`.  The 
+customers are in an array, so for simplicity we will use a table to display them.  We will loop through
+the customers using the `Array.map` method.
+
+The `Customer` entity has several properties, but we'll just display the `firstName`, `lastName` and the [entityState](http://breeze.github.io/doc-js/api-docs/classes/entitystate.html) of the customer.
+The entityState indicates whether the Customer has been changed since it was queried from the server.  Right now, all of our customers
+will be **Unchanged**, but we will be modifying them later.
+
+Our updated `render` method will look like this:
+```
+  render() {
+    return (
+      <div>
+        <h1>Customers</h1>
+
+        <table>
+          <tbody>
+            {this.state.customers.map(cust =>
+             <tr key={cust.id}>
+              <td>{cust.firstName} {cust.lastName}</td>
+              <td>{cust.entityAspect.entityState.name}</td>
+            </tr>)
+            }
+          </tbody>
+        </table>
+
+      </div>
+    );
+  }
+```
+#### Try it out
+
+Now your `Customers.tsx` file should look like this:
+```
+import React from 'react';
+import { EntityManager, EntityQuery } from 'breeze-client';
+import { Customer } from './model/customer';
+import { entityManagerProvider } from './model/entity-manager-provider';
+
+interface CustState {
+  customers: Customer[];
+  selected: Customer;
+}
+export class Customers extends React.Component<any, CustState> {
+
+  manager: EntityManager;
+
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      customers: [] as Customer[],
+      selected: null as Customer
+    };
+    this.manager = entityManagerProvider.newManager();
+  }
+  
+  componentDidMount() {
+    entityManagerProvider.subscribeComponent(this.manager, this);
+
+    const query = new EntityQuery("Customers").where("lastName", "startsWith", "C").expand("orders");
+    this.manager.executeQuery(query).then(qr => {
+      this.setState({
+        customers: qr.results
+      });
+    });
+  }
+
+  componentWillUnmount() {
+    entityManagerProvider.unsubscribeComponent(this.manager, this);
+  }
+
+  render() {
+    return (
+      <div>
+        <h1>Customers</h1>
+
+        <table>
+          <tbody>
+            {this.state.customers.map(cust =>
+             <tr key={cust.id}>
+              <td>{cust.firstName} {cust.lastName}</td>
+              <td>{cust.entityAspect.entityState.name}</td>
+            </tr>)
+            }
+          </tbody>
+        </table>
+
+      </div>
+    );
+  }
+}
+```
+
+Go back to the browser on [http://localhost:3000/](http://localhost:3000/) and refresh the page.  You should see
+the list of customers:
+
+Now you should see the data display on the page:
+```
+Customers
+
+Frédérique Citeaux  Unchanged
+Francisco Chang     Unchanged
+Aria Cruz           Unchanged
+Simon Crowtherm	    Unchanged
+Lúcia Carvalho      Unchanged
+Alejandra Camino    Unchanged
+Pascale Cartrain    Unchanged
+```
+
+## Editing
+
+Now we'll add editing functions to the CustomerComponent.  The behavior will be:
+
+ - Click on a row to select a customer
+ - A form allows editing or deleting the selected customer
+ - One or more customers can be edited before saving
+ - A save button saves the changes to the database
+ - A revert button restores all customers to their last-saved condition
+
+### Selecting a Customer
+
+In the `Customers.tsx` file, edit the `render` method.  Make two changes to the opening `<tr>` tag:
+ - set the **style** of the customer rows so that the background will be a different color for the selected row
+ - add an **onClick** handler to set the `selected` property of the state to the current customer 
+```
+  <tr key={cust.id} 
+    style={{backgroundColor: (cust === this.state.selected) ? 'lightgray' : 'white'}}
+    onClick={() => this.setState({ selected: cust })}>
+```
+Save this change, and go back to the browser and refresh the page.  Now you should be able
+to click on a row and see the customer highlighted.
+
+### Add Input Fields
+
+
+
+
+
+
+
+
+
+Back in the `Customers.tsx` file, we will add methods to add a customer, delete a customer, save changes, and revert changes:
+
+### Add a customer
+
+### Save and Revert
+
+### Test the editing
+
+Now you should be able to add a new Customer, edit the properties of new and existing customers, delete customers, and save
+the changes in a batch.  (Remember that we only query customers where lastName starts with "C").
+
+If you open your browser's developer tools (F12), you can see the network traffic between the Breeze client and the server API
+as queries and saves are sent.
+
+## Conclusion
+
+We have come to the end of our journey.  
+
+We've created a React 8 + Breeze application from the ground up,
+using tools to create a simple entity model from the database for both the client and server parts of the application.
+
+We now have an application that can create, read, update, and delete data.  It's ready for an improved UI, 
+and it's ready to be extended to cover more entity types and more complex uses cases.
+<hr>
+If you have problems with this demo, please create issues in this github repo.
+
+If you have questions about Breeze, please ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/breeze).
+
+If you need help developing your application, please contact us at [IdeaBlade](mailto:info@ideablade.com).
+
+
