@@ -408,7 +408,7 @@ Our updated `render` method will look like this:
       <div>
         <h1>Customers</h1>
 
-        <table>
+        <table style={{margin: 'auto'}}>
           <tbody>
             {this.state.customers.map(cust =>
              <tr key={cust.id}>
@@ -469,7 +469,7 @@ export class Customers extends React.Component<any, CustState> {
       <div>
         <h1>Customers</h1>
 
-        <table>
+        <table style={{margin: 'auto'}}>
           <tbody>
             {this.state.customers.map(cust =>
              <tr key={cust.id}>
@@ -525,21 +525,126 @@ In the `Customers.tsx` file, edit the `render` method.  Make two changes to the 
 Save this change, and go back to the browser and refresh the page.  Now you should be able
 to click on a row and see the customer highlighted.
 
+### Add Edit Methods
+
+Back in the `Customers.tsx` file, we will add methods to add a customer, delete a customer, save changes, and revert changes.
+```
+  addCustomer() {
+    let cust = this.manager.createEntity(Customer.prototype.entityType) as Customer;
+    // select the new customer, and add it to the list of customers
+    this.setState({
+      selected: cust,
+      customers: this.state.customers.concat([cust])
+    })
+  }
+
+  remove(ent: Customer) {
+    ent.entityAspect.setDeleted();
+  }
+
+  saveChanges() {
+    this.manager.saveChanges().then(() => {
+      // refresh customer list to remove deleted customers
+      this.setState({
+        customers: this.manager.getEntities("Customer") as Customer[]
+      })
+    });
+  }
+
+  rejectChanges() {
+    this.manager.rejectChanges();
+    this.setState({
+      // refresh customer list to restore to original state
+      customers: this.manager.getEntities("Customer") as Customer[]
+    })
+  }
+
+```
+These methods use the Breeze [EntityManager](http://breeze.github.io/doc-js/api-docs/classes/entitymanager.html) and 
+[EntityAspect](http://breeze.github.io/doc-js/api-docs/classes/entityaspect.html) to manipulate the entities.
+
+Breeze keeps track of the state of each entity, and syncs up with the server when `saveChanges()` is called.
+
+Since these methods use `this` internally, we need to `bind` them to our component so that they have the right `this` when called.
+Add the following lines at the end of the constructor:
+```
+  this.saveChanges = this.saveChanges.bind(this);
+  this.rejectChanges = this.rejectChanges.bind(this);
+  this.addCustomer = this.addCustomer.bind(this);
+  this.remove = this.remove.bind(this);
+```
+
 ### Add Input Fields
 
+Now we'll add `<input>` elements for the customer properties.  Our `render()` method is becoming large, so we'll 
+create a separate method, `renderCustEdit()`, to hold the code for editing.
+```
+  renderCustEdit() {
+    let cust = this.state.selected;
+    if (cust) {
+      return <div><h3>Edit</h3>
+        <div>First Name: <input type="text" name="firstName" value={cust.firstName} onChange={cust.handleChange} /></div>
+        <div>Last Name: <input type="text" name="lastName" value={cust.lastName} onChange={cust.handleChange} /></div>
+        <div>City: <input type="text" name="city" value={cust.city} onChange={cust.handleChange} /></div>
+        <div>Country: <input type="text" name="country" value={cust.country} onChange={cust.handleChange} /></div>
+        <div>Phone: <input type="text" name="phone" value={cust.phone} onChange={cust.handleChange} /></div>
+      </div>
+    }
+  }
+```
+The method begins by getting the selected customer.  The method only renders the input form if a customer is selected.
+
+Each input element gets its `value` from a property of the customer entity.  And each has an `onChange` handler
+that updates the value of the property in the customer entity when the value of the input changes.
+
+Now we need to call the `renderCustEdit()` method from `render()`, so that our inputs will show when a customer is
+selected.  
+
+We also need to be able to save the changes after we have edited one or more customers, and to
+revert the changes to restore customers to their original state.  We already added the `saveChanges`
+and `rejectChanges` methods above, so we just need to add buttons to call them.
+
+Put the following lines after the `</table>`:
+```
+  {this.renderCustEdit()}
+
+  <div style={{marginTop: '20px'}}>
+    <button type="button" disabled={!this.manager.hasChanges()} onClick={this.saveChanges}>Save Changes</button>
+    <button type="button" disabled={!this.manager.hasChanges()} onClick={this.rejectChanges}>Revert Changes</button>
+  </div>
+```
+The buttons call the `saveChanges` and `rejectChanges` methods in their `onClick` handlers.  
+The buttons are disabled unless there are changes to one or more entities.
+
+This will show the input fields when a customer is selected, and it will show the Save and Revert buttons.
+The Save and Revert buttons will be disabled unless there are modified entities.
 
 
+Now, when you click on a customer, you should see an edit section appear, with inputs for each
+of the customer properties.  
 
-
-
-
-
-
-Back in the `Customers.tsx` file, we will add methods to add a customer, delete a customer, save changes, and revert changes:
+As you try out the form, observe a few behaviors:
+- when you change a property of the customer, the 
+[entityState](http://breeze.github.io/doc-js/api-docs/classes/entitystate.html) of the customer
+changes from **Unchanged** to **Modified**.  
+- you can click around to several customers and make changes to them
+- when you click **Revert Changes**, all customers are restored to their last-saved state
+- when you click **Save Changes**, all customer changes are saved, and their state is set to **Unchanged**
 
 ### Add a customer
 
-### Save and Revert
+Now we will add a new customer.  We already have the `addCustomer` method in our code, we just need to add the button.
+
+Add the following below the customer table:
+```
+<button type="button" onClick={this.addCustomer}>Add Customer</button>
+```
+When you click the button, the component adds a new row to the customers table.  It also selects
+the new customer for editing, so you can edit its properties.
+
+### Delete a customer
+
+TBD
 
 ### Test the editing
 

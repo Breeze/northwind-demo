@@ -18,6 +18,11 @@ export class Customers extends React.Component<any, CustState> {
       selected: null as Customer
     };
     this.manager = entityManagerProvider.newManager();
+
+    this.saveChanges = this.saveChanges.bind(this);
+    this.rejectChanges = this.rejectChanges.bind(this);
+    this.addCustomer = this.addCustomer.bind(this);
+    this.remove = this.remove.bind(this);
   }
   
   componentDidMount() {
@@ -35,12 +40,56 @@ export class Customers extends React.Component<any, CustState> {
     entityManagerProvider.unsubscribeComponent(this.manager, this);
   }
 
+  addCustomer() {
+    let cust = this.manager.createEntity(Customer.prototype.entityType, 
+      {firstName: "", lastName: "", city: "", country: "", phone: ""}) as Customer;
+    // select the new customer, and add it to the list of customers
+    this.setState({
+      selected: cust,
+      customers: this.state.customers.concat([cust])
+    })
+  }
+
+  remove(ent: Customer) {
+    ent.entityAspect.setDeleted();
+  }
+
+  saveChanges() {
+    this.manager.saveChanges().then(() => {
+      // refresh customer list to remove deleted customers
+      this.setState({
+        customers: this.manager.getEntities("Customer") as Customer[]
+      })
+    });
+  }
+
+  rejectChanges() {
+    this.manager.rejectChanges();
+    this.setState({
+      // refresh customer list to restore to original state
+      customers: this.manager.getEntities("Customer") as Customer[]
+    })
+  }
+
+  renderCustEdit() {
+    let cust = this.state.selected;
+    if (cust) {
+      return <div><h3>Edit</h3>
+        <div>First Name: <input type="text" name="firstName" value={cust.firstName} onChange={cust.handleChange} /></div>
+        <div>Last Name: <input type="text" name="lastName" value={cust.lastName} onChange={cust.handleChange} /></div>
+        <div>City: <input type="text" name="city" value={cust.city} onChange={cust.handleChange} /></div>
+        <div>Country: <input type="text" name="country" value={cust.country} onChange={cust.handleChange} /></div>
+        <div>Phone: <input type="text" name="phone" value={cust.phone} onChange={cust.handleChange} /></div>
+      </div>
+    }
+  }
+
   render() {
     return (
       <div>
         <h1>Customers</h1>
 
-        <table>
+        <table style={{margin: 'auto'}}>
           <tbody>
             {this.state.customers.map(cust =>
              <tr key={cust.id} 
@@ -52,6 +101,15 @@ export class Customers extends React.Component<any, CustState> {
             }
           </tbody>
         </table>
+        <button type="button" onClick={this.addCustomer}>Add Customer</button>
+
+        {this.renderCustEdit()}
+
+        <div style={{marginTop: '20px'}}>
+          <button type="button" disabled={!this.manager.hasChanges()} onClick={this.saveChanges}>Save Changes</button>
+          <button type="button" disabled={!this.manager.hasChanges()} onClick={this.rejectChanges}>Revert Changes</button>
+        </div>
+
       </div>
     );
   }
