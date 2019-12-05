@@ -26,7 +26,7 @@ The overall steps for creating our application:
 1. Create the directory structure
 2. Create the database
 3. Create the server ([.NET Core](./STEPS-Server-Core.md) or NodeJS)
-4. Create the client ([Angular](./STEPS-Client-Angular), React, or Vue)
+4. Create the client ([Angular](./STEPS-Client-Angular.md), [React](./STEPS-Client-React.md), or [Vue](./STEPS-Client-Vue.md))
 
 Let's get started!
 
@@ -65,3 +65,8 @@ Next we'll work on the API server.
 See [STEPS-Server-Core](./STEPS-Server-Core.md) for creating a .NET Core server.
 
 <!-- See [STEPS-Server-Node](./STEPS-Server-Node.md) for creating a NodeJS server. -->
+If you want to jump ahead to look at the client apps, see:
+
+- [STEPS-Client-Angular](./STEPS-Client-Angular.md) for an Angular app,
+- [STEPS-Client-React](./STEPS-Client-React.md) for a React app,
+- [STEPS-Client-Vue](./STEPS-Client-Vue.md) for a Vue app
