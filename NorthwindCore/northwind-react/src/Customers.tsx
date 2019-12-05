@@ -31,6 +31,7 @@ export class Customers extends React.Component<any, CustState> {
     const query = new EntityQuery("Customers").where("lastName", "startsWith", "C").expand("orders");
     this.manager.executeQuery(query).then(qr => {
       this.setState({
+        selected: null,
         customers: qr.results
       });
     });
@@ -41,8 +42,7 @@ export class Customers extends React.Component<any, CustState> {
   }
 
   addCustomer() {
-    let cust = this.manager.createEntity(Customer.prototype.entityType, 
-      {firstName: "", lastName: "", city: "", country: "", phone: ""}) as Customer;
+    let cust = this.manager.createEntity(Customer.prototype.entityType) as Customer;
     // select the new customer, and add it to the list of customers
     this.setState({
       selected: cust,
@@ -58,6 +58,7 @@ export class Customers extends React.Component<any, CustState> {
     this.manager.saveChanges().then(() => {
       // refresh customer list to remove deleted customers
       this.setState({
+        selected: null,
         customers: this.manager.getEntities("Customer") as Customer[]
       })
     });
@@ -65,8 +66,9 @@ export class Customers extends React.Component<any, CustState> {
 
   rejectChanges() {
     this.manager.rejectChanges();
+    // refresh customer list to restore original state
     this.setState({
-      // refresh customer list to restore to original state
+      selected: null,
       customers: this.manager.getEntities("Customer") as Customer[]
     })
   }
@@ -75,11 +77,12 @@ export class Customers extends React.Component<any, CustState> {
     let cust = this.state.selected;
     if (cust) {
       return <div><h3>Edit</h3>
-        <div>First Name: <input type="text" name="firstName" value={cust.firstName} onChange={cust.handleChange} /></div>
-        <div>Last Name: <input type="text" name="lastName" value={cust.lastName} onChange={cust.handleChange} /></div>
-        <div>City: <input type="text" name="city" value={cust.city} onChange={cust.handleChange} /></div>
-        <div>Country: <input type="text" name="country" value={cust.country} onChange={cust.handleChange} /></div>
-        <div>Phone: <input type="text" name="phone" value={cust.phone} onChange={cust.handleChange} /></div>
+        <div>First Name: <input type="text" name="firstName" value={cust.firstName || ''} onChange={cust.handleChange} /></div>
+        <div>Last Name: <input type="text" name="lastName" value={cust.lastName || ''} onChange={cust.handleChange} /></div>
+        <div>City: <input type="text" name="city" value={cust.city || ''} onChange={cust.handleChange} /></div>
+        <div>Country: <input type="text" name="country" value={cust.country || ''} onChange={cust.handleChange} /></div>
+        <div>Phone: <input type="text" name="phone" value={cust.phone || ''} onChange={cust.handleChange} /></div>
+        <button type="button" onClick={this.remove.bind(this, cust)}>Delete</button>
       </div>
     }
   }

@@ -231,10 +231,10 @@ export class EntityManagerProvider {
     return this.masterManager.createEmptyCopy();
   }
 
-  /** Call forceUpdate() on the component when an entity property changes */
+  /** Call forceUpdate() on the component when an entity property or state changes */
   subscribeComponent(manager: EntityManager, component: { forceUpdate: () => void }) {
     let subid = manager.entityChanged.subscribe((data: { entityAction: EntityAction }) => {
-      if (data.entityAction === EntityAction.PropertyChange) {
+      if (data.entityAction === EntityAction.PropertyChange || data.entityAction === EntityAction.EntityStateChange) {
         component.forceUpdate();
       }
     });
@@ -507,7 +507,7 @@ Pascale Cartrain    Unchanged
 Now we'll add editing functions to the CustomerComponent.  The behavior will be:
 
  - Click on a row to select a customer
- - A form allows editing or deleting the selected customer
+ - A form appears, to allow editing or deleting the selected customer
  - One or more customers can be edited before saving
  - A save button saves the changes to the database
  - A revert button restores all customers to their last-saved condition
@@ -546,6 +546,7 @@ Back in the `Customers.tsx` file, we will add methods to add a customer, delete 
     this.manager.saveChanges().then(() => {
       // refresh customer list to remove deleted customers
       this.setState({
+        selected: null,
         customers: this.manager.getEntities("Customer") as Customer[]
       })
     });
@@ -553,12 +554,12 @@ Back in the `Customers.tsx` file, we will add methods to add a customer, delete 
 
   rejectChanges() {
     this.manager.rejectChanges();
+    // refresh customer list to restore original state
     this.setState({
-      // refresh customer list to restore to original state
+      selected: null,
       customers: this.manager.getEntities("Customer") as Customer[]
     })
   }
-
 ```
 These methods use the Breeze [EntityManager](http://breeze.github.io/doc-js/api-docs/classes/entitymanager.html) and 
 [EntityAspect](http://breeze.github.io/doc-js/api-docs/classes/entityaspect.html) to manipulate the entities.
@@ -583,11 +584,11 @@ create a separate method, `renderCustEdit()`, to hold the code for editing.
     let cust = this.state.selected;
     if (cust) {
       return <div><h3>Edit</h3>
-        <div>First Name: <input type="text" name="firstName" value={cust.firstName} onChange={cust.handleChange} /></div>
-        <div>Last Name: <input type="text" name="lastName" value={cust.lastName} onChange={cust.handleChange} /></div>
-        <div>City: <input type="text" name="city" value={cust.city} onChange={cust.handleChange} /></div>
-        <div>Country: <input type="text" name="country" value={cust.country} onChange={cust.handleChange} /></div>
-        <div>Phone: <input type="text" name="phone" value={cust.phone} onChange={cust.handleChange} /></div>
+        <div>First Name: <input type="text" name="firstName" value={cust.firstName || ''} onChange={cust.handleChange} /></div>
+        <div>Last Name: <input type="text" name="lastName" value={cust.lastName || ''} onChange={cust.handleChange} /></div>
+        <div>City: <input type="text" name="city" value={cust.city || ''} onChange={cust.handleChange} /></div>
+        <div>Country: <input type="text" name="country" value={cust.country || ''} onChange={cust.handleChange} /></div>
+        <div>Phone: <input type="text" name="phone" value={cust.phone || ''} onChange={cust.handleChange} /></div>
       </div>
     }
   }
@@ -635,16 +636,36 @@ changes from **Unchanged** to **Modified**.
 
 Now we will add a new customer.  We already have the `addCustomer` method in our code, we just need to add the button.
 
-Add the following below the customer table:
+Add the following line, after the customer table in the `render` method:
 ```
 <button type="button" onClick={this.addCustomer}>Add Customer</button>
 ```
-When you click the button, the component adds a new row to the customers table.  It also selects
-the new customer for editing, so you can edit its properties.
+When you click the button, the `addCustomer` method creates a new Customer entity, and adds it to the component's `state.customers` array.
+It also sets the `state.selected` property to the new Customer.  
+
+These actions cause the component to update the UI,
+adding a new row to the customers table, and selecting the new customer for editing, so you can edit its properties.
+
+The new customer's EntityState is **Added**.  It will remain Added until it is either saved or deleted.
+See more about change tracking in the [Breeze documentation](http://breeze.github.io/doc-js/lap-changetracking.html)
 
 ### Delete a customer
 
-TBD
+We already added the `remove` method earlier, so now let's add a button to call it.  This button will delete the selected
+customer, so we'll put it in the editing area when a customer is selected.
+
+Add the following line after all the input lines in the `renderCustEdit` method:
+```
+<button type="button" onClick={this.remove.bind(this, cust)}>Delete</button>
+```
+When you click the button, the `remove` method changes the selected customer's EntityState, but it doesn't
+remove the customer from the list in the UI.  That will happen after the changes are saved or reverted, and the 
+list is rebuilt.
+
+> Note that when an **Unchanged** or **Modified** customer is deleted, its EntityState becomes **Deleted**.  
+But when an **Added** customer is deleted, its EntityState becomes **Detached**.  This is because
+the newly-added entity does not need to be deleted from the server, because it doesn't exist there.
+You can learn more about entity state transitions in the [Breeze documentation](http://breeze.github.io/doc-js/inside-entity.html). 
 
 ### Test the editing
 
@@ -658,7 +679,7 @@ as queries and saves are sent.
 
 We have come to the end of our journey.  
 
-We've created a React 8 + Breeze application from the ground up,
+We've created a React + Breeze application from the ground up,
 using tools to create a simple entity model from the database for both the client and server parts of the application.
 
 We now have an application that can create, read, update, and delete data.  It's ready for an improved UI, 

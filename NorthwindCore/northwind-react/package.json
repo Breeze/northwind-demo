@@ -7,7 +7,7 @@
     "@types/node": "12.11.5",
     "@types/react": "16.9.9",
     "@types/react-dom": "16.9.2",
-    "breeze-client": "^2.0.0",
+    "breeze-client": "^2.0.2",
     "breeze-entity-generator": "^1.0.0",
     "react": "^16.11.0",
     "react-dom": "^16.11.0",
