@@ -1,7 +1,16 @@
-# northwind-core-ng-demo
-Breeze demo with .NET Core 2.2 and Angular 8
+# Northwind Core Demo
+Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on how to build it from scratch.
 
-See the NorthwindCore directory for the complete sample projects.
+**Server** is one of
+  - .NET Core 2.2 with EFCore 2
+  - .NET Core 3.1 with EFCore 3
+  
+**Client** is one of 
+  - Angular 8
+  - React
+  - Vue
+
+See the [NorthwindCore](NorthwindCore) directory for the complete sample projects.
 
 See the [STEPS](STEPS.md) document for the steps to create the sample from scratch.
 <hr>
