@@ -15,6 +15,7 @@ namespace NorthwindServer
                 var dbContext = new NorthwindCoreContext();
                 var persistenceManager = new NorthwindCorePersistenceManager(dbContext);
                 var metadata = persistenceManager.Metadata();
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
                 Console.Out.WriteLine(metadata);
             }
             else
