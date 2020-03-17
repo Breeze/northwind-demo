@@ -123,64 +123,6 @@ These are the entity classes, plus the metadata and the registration-helper that
 _Note that you can customize the entity output by changing the parameters to the `generate` function, 
 and by changing the template files.  See `node_modules/breeze-entity-generator/README.md` for more information._
 
-## Configure App Module
-
-Now we need to register the Breeze adapters to work with React.  
-
-Edit `northwind-react\src\app\app.module.ts`.  At the top of the file, add the following imports:
-```
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { FormsModule } from '@angular/forms';
-import { NamingConvention } from 'breeze-client';
-import { DataServiceWebApiAdapter } from 'breeze-client/adapter-data-service-webapi';
-import { ModelLibraryBackingStoreAdapter } from 'breeze-client/adapter-model-library-backing-store';
-import { UriBuilderJsonAdapter } from 'breeze-client/adapter-uri-builder-json';
-import { AjaxHttpClientAdapter } from 'breeze-client/adapter-ajax-httpclient';
-```
-Add `HttpClientModule` and `FormsModule` to the `imports` section of the `@NgModule` declaration:
-```
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule,
-    FormsModule
-  ],
-```
-
-In the class declaration at the bottom of the file, add the constructor:
-```
-export class AppModule {
-  constructor(http: HttpClient) {
-    // Configure Breeze adapters
-    ModelLibraryBackingStoreAdapter.register();
-    UriBuilderJsonAdapter.register();
-    AjaxHttpClientAdapter.register(http);
-    DataServiceWebApiAdapter.register();
-    NamingConvention.camelCase.setAsDefault();
-  }
-}
-```
-That's a lot of adapters!  Let's look at what they do:
- - `ModelLibraryBackingStoreAdapter` stores data in entities in a way that is compatible with React
- - `UriBuilderJsonAdapter` encodes Breeze queries in JSON format in query URIs
- - `AjaxHttpClientAdapter` uses React's HttpClient for performing AJAX requests
- - `DataServiceWebApiAdapter` turns server responses into Breeze entities
- - `NamingConvention` sets how Breeze converts entity property names between client and server
-
-## Create the environment settings
-
-The client application needs to know the URL to reach the server.  This sort of this is environment-specific,
-so we'll keep it in the `environment.ts` file.
-
-Edit `src/environments/environment.ts` and add a line for breezeApiRoot.  The port should be the one
-on which your NorthwindServer is listening, and the path is the path to your BreezeController.
-```
-export const environment = {
-  production: false,
-  breezeApiRoot: 'http://localhost:33028/api/breeze'
-};
-```
-
 ## Create the EntityManagerProvider
 
 In a Breeze application, the [EntityManager](http://breeze.github.io/doc-js/entitymanager-and-caching.html) caches the
@@ -255,6 +197,13 @@ export const entityManagerProvider = new EntityManagerProvider();
 That's a lot of code, so let's break it down.
 
 - The constructor configures Breeze adapters to work with a React app and our server's API conventions.
+
+  - `ModelLibraryBackingStoreAdapter` stores data in entities in a way that is compatible with React
+  - `UriBuilderJsonAdapter` encodes Breeze queries in JSON format in query URIs
+  - `AjaxFetchAdapter` uses the browser's `fetch` API for performing AJAX requests
+  - `DataServiceWebApiAdapter` turns server responses into Breeze entities
+  - `NamingConvention` sets how Breeze converts entity property names between client and server
+
 - The constructor then creates a `masterManager` and configures it with our entity metadata and server address.  You will need to update the `serviceName` to match your server's breeze endpoint.
 - The `newManager` method returns a new, empty `EntityManager`, configured like the `masterManager`.
 - The `subscribeComponent` method hooks a component into the entity life-cycle.  It tells the component to update its view whenever an entity property changes.  React only re-renders the parts of the view that have actually changed.
