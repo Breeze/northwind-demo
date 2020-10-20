@@ -41,22 +41,30 @@ We'll create subdirectories as we go, but start by creating the root directory. 
 It's common to build a new app using an existing database, so we will start by
 creating the sample database.  The sample database we will use is a subset of the 
 classic Microsoft sample db, "Northwind".  The scripts for creating it were copied
-from the SQL tutorial site [dofactory](https://www.dofactory.com/sql/sample-database).
+from the SQL tutorial site [dofactory](https://www.dofactory.com/sql/sample-database)
+and adapted for different database dialects.
 
-The scripts assume MS SQL Server or SQL Express.  If you are using a different database server, you will need to adapt the scripts accordingly.
+The scripts assume one of:
+
+ - MS SQL Server or SQL Express.
+ - Mysql
+ - Postgres
+ - sqlite
+ 
+ There is a pair of scripts for each of the above dialects (mssql | mysql | postgres | sqlite).  If you are using a different database server, you will need to adapt the scripts accordingly.
 
 1. Copy contents of the `dbscripts` folder from the sample repo into your own `dbscripts` folder.
 
 2. In SQL Server Management Studio (or similar tool), create the database:
 
-        CREATE DATABASE NorthwindCore
+        CREATE DATABASE Northwind
         GO
-        USE NorthwindCore
+        USE Northwind
         GO
 
-3. Open and run the script to create the tables, `dbscripts\sample-model.sql`
+3. Open and run the script to create the tables, `dbscripts\{dialect}-sample-model.sql`.
 
-4. Open and run the script to insert the data, `dbscripts\sample-data.sql`
+4. Open and run the script to insert the data, `dbscripts\{dialect}-sample-data.sql`
 
 ## Next Steps
 
