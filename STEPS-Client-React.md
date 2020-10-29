@@ -21,7 +21,7 @@ First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.np
 
 Next, open a command prompt in the `NorthwindCore` directory, and follow the steps below:
 
-1. `npx create-react-app northwind-rrr --typescript --use-npm`
+1. `npx create-react-app northwind-react --typescript --use-npm`
 
 Now you should have a `NorthwindCore/northwind-react` directory containing the React app.  Try it out:
 

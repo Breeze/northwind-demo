@@ -42,7 +42,7 @@ It's common to build a new app using an existing database, so we will start by
 creating the sample database.  The sample database we will use is a subset of the 
 classic Microsoft sample db, "Northwind".  
 
-See the README in the [dbscripts](./dbscripts) directory and follow the instructions there to create your Northwind database.
+See the README in the [dbscripts](./NorthwindCore/dbscripts) directory and follow the instructions there to create your Northwind database.
 
 Then come back here for the next steps.
 

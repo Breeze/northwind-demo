@@ -1,9 +1,9 @@
 # Steps for creating a Node.js Breeze Server
 
 In just a few steps, we will create a Breeze server on Node.js.   The server will implement an API
-that will allow us to read and update a relational database.  We'll use `Express`, `Sequelize`, and `Breeze-Sequelize`.  
+that will allow us to read and update a relational database.  We'll use [Express](https://expressjs.com/), [Sequelize](https://sequelize.org/master/), and [Breeze-Sequelize](http://breeze.github.io/doc-node-sequelize/introduction.html).  
 
-We will write it in TypeScript because it helps make more maintainable apps.
+We will write it in [TypeScript](https://www.typescriptlang.org/) because it helps make more maintainable apps.
 
 Later, we'll work on a client that talks to our server.
 
@@ -13,10 +13,10 @@ following the steps in the [STEPS](./STEPS.md) document.
 For the server, we'll start with an empty directory, and implement a Breeze API that
 our client can use to query and update data in the database.  Along the way we will:
 
-- Create an Express web server
 - Export entity classes from the database using `sequelize-auto`
 - Create metadata from the entity model
 - Create an API for interacting with the entity model
+- Create an Express web server
 
 ## Prerequisites
 
@@ -36,14 +36,14 @@ You'll also need to install a package that is specific to the database dialect y
 
 Dialect | Install
 ---|---
+MSSQL | `npm install tedious`
 MySQL/MariaDB | `npm install mysql2`
 Postgres | `npm install pg pg-hstore`
-Sqlite | `npm install sqlite3`
-MSSQL | `npm install tedious`
+SQLite | `npm install sqlite3`
 
 If you haven't installed the database yet, go back to the [STEPS](./STEPS.md) document.
 
-If you don't have a database preference, we recommend **SQLite** for this project because it requires no installation except for the `sqlite3` package.
+> If you don't have a database preference, we recommend **SQLite** for this project because it requires no installation except for the `sqlite3` package.
 
 ## Create a config file 
 
@@ -138,7 +138,7 @@ work on the client.
 
 Now we will start working on the server.  We will start by creating the "middleware" functions, then create the Express server that uses them.
 
-In Express, "middleware" functions are used to handle requests.  Many such functions can be registered, and Express will choose the correct ones to call
+In Express, [middleware](https://expressjs.com/en/guide/using-middleware.html) functions are used to handle requests.  Many such functions can be registered, and Express will choose the correct ones to call
 based on the request method and the _route_, or path, of the request URL.  
 
 In our Breeze API server, we need to handle GET requests when we query for data, 
@@ -152,13 +152,6 @@ Here is an example, querying Customers in Germany:
 GET /api/breeze/Customer?{"where":{"Country":"Germany"}}
 ```
 Our middleware will handle this in a `query` function that converts the request to a `SequelizeQuery`, executes it, and returns the results.
-
-Our middleware will handle this request by:
-1. Extracting the resource name ("Customer" in this example)
-2. Converting the URL to a Breeze `EntityQuery`
-3. Converting the `EntityQuery` to a `SequelizeQuery`
-4. Executing the `SequelizeQuery`
-5. Sending the results to the client.
 
 ### Breeze POST requests
 
@@ -181,8 +174,7 @@ POST /api/breeze/SaveChanges
   ]
 }
 ```
-Our middleware will handle this in a `saveChanges` function that uses a `SequelizeSaveHandler` to convert the request to Sequelize commands.  
-It returns the saved entities in the result.
+Our middleware will handle this in a `saveChanges` function that uses a `SequelizeSaveHandler` to convert the request to Sequelize commands.  It returns the saved entities in the result.
 
 Our middleware will handle two routes: 
 - `/api/breeze/SaveChanges` for saves, and 
@@ -194,8 +186,7 @@ In the **NorthwindSequelize** directory, create file `routes.ts`.  In the file p
 
 ```js
 import {
-  SequelizeManager, SequelizeQuery, SequelizeQueryResult, SequelizeSaveHandler, SequelizeSaveResult,
-  urlToEntityQuery
+  SequelizeManager, SequelizeQuery, SequelizeQueryResult, SequelizeSaveHandler, SequelizeSaveResult, urlToEntityQuery
 } from "breeze-sequelize";
 import { NextFunction, Request, Response } from "express";
 import { config, namespace, options } from "./config";
@@ -243,6 +234,13 @@ function returnResults(results: SequelizeQueryResult | SequelizeSaveResult, res:
 
 Now we'll create the script to configure Express using the middleware we created above.
 
+We'll also set up:
+ - CORS, since our client app will be on a different port
+ - Parsing for json and url-encoded requests
+ - Error handling
+
+We'll run the server on port 4000 (but you can change this if you wish).
+
 In the **NorthwindSequelize** directory, create file `server.ts`.  In the file put the following:
 
 ```js
@@ -286,3 +284,54 @@ function errorHandler(err: any, req: Request, res: Response, next: NextFunction)
   }
 }
 ```
+
+## Run the server
+
+Now compile the TypeScript files:
+```
+> tsc
+```
+and run the server:
+```
+> node server
+```
+
+You should see some messages from Breeze about loading the entity types, and then the message "Listening on port 4000".
+
+Now open a browser and go to [http://localhost:4000/api/breeze/Customer?{"where":{"Country":"Germany"}}](http://localhost:4000/api/breeze/Customer?{%22where%22:{%22Country%22:%22Germany%22}}).  You should see data returned from the database:
+```
+[
+  {
+    "Id": 1,
+    "FirstName": "Maria",
+    "LastName": "Anders",
+    "City": "Berlin",
+    "Country": "Germany",
+    "Phone": "030-0074321",
+    "$type": "Customer:#NorthwindModel.Models"
+  },
+  {
+    "Id": 6,
+    "FirstName": "Hanna",
+    "LastName": "Moos",
+    "City": "Mannheim",
+    "Country": "Germany",
+    "Phone": "0621-08460",
+    "$type": "Customer:#NorthwindModel.Models"
+  },
+  ...
+  ```
+## Review
+
+To create this server, we have:
+1. Installed the npm packages
+2. Created a configuration file
+3. Created an export script
+4. Run the script to create models and metadata
+5. Created middleware for a Breeze API
+6. Created an Express server
+7. Tested a query
+
+If everything is working, now we are ready to create our client application.
+
+
