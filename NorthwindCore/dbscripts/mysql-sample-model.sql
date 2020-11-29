@@ -1,13 +1,13 @@
 CREATE DATABASE  IF NOT EXISTS `Northwind` /*!40100 DEFAULT CHARACTER SET utf8 */;
 USE `Northwind`;
 
-DROP TABLE IF EXISTS `OrderItem`;
-DROP TABLE IF EXISTS `Product`;
-DROP TABLE IF EXISTS `Supplier`;
-DROP TABLE IF EXISTS `Order`;
-DROP TABLE IF EXISTS `Customer`;
+DROP TABLE IF EXISTS `order_item`;
+DROP TABLE IF EXISTS `product`;
+DROP TABLE IF EXISTS `supplier`;
+DROP TABLE IF EXISTS `order`;
+DROP TABLE IF EXISTS `customer`;
 
-CREATE TABLE Customer (
+CREATE TABLE `customer` (
    Id                   INT                 NOT NULL AUTO_INCREMENT,
    FirstName            VARCHAR(40)         NOT NULL,
    LastName             VARCHAR(40)         NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE Customer (
    KEY `Key_Customer_LastFirst` (`LastName`, `FirstName`)
 );
 
-CREATE TABLE `Order` (
+CREATE TABLE `order` (
    Id                   INT                 NOT NULL AUTO_INCREMENT,
    OrderDate            DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
    OrderNumber          VARCHAR(10)         NULL,
@@ -29,7 +29,7 @@ CREATE TABLE `Order` (
    KEY `Key_Order_OrderDate` (`OrderDate`)
 );
 
-CREATE TABLE OrderItem (
+CREATE TABLE `order_item` (
    Id                   INT                  NOT NULL AUTO_INCREMENT,
    OrderId              INT                  NOT NULL,
    ProductId            INT                  NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE OrderItem (
    KEY `Key_OrderItem_ProductId` (`ProductId`)
 );
 
-CREATE TABLE Product (
+CREATE TABLE `product` (
    Id                   INT                 NOT NULL AUTO_INCREMENT,
    ProductName          VARCHAR(50)         NOT NULL,
    SupplierId           INT                 NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE Product (
    KEY `Key_Product_ProductName` (`ProductName`)
 );
 
-CREATE TABLE Supplier (
+CREATE TABLE `supplier` (
    Id                   INT                 NOT NULL AUTO_INCREMENT,
    CompanyName          VARCHAR(40)         NOT NULL,
    ContactName          VARCHAR(50)         NULL,
@@ -67,15 +67,15 @@ CREATE TABLE Supplier (
 );
 
 
-ALTER TABLE `Order`
+ALTER TABLE `order`
   ADD CONSTRAINT `FK_Order_Customer` FOREIGN KEY (`CustomerId`) REFERENCES `Customer` (`Id`);
 
-ALTER TABLE `OrderItem`
+ALTER TABLE `order_item`
    ADD CONSTRAINT `FK_OrderItem_Order` FOREIGN KEY (`OrderId`) REFERENCES `Order` (`Id`);
 
-ALTER TABLE `OrderItem`
+ALTER TABLE `order_item`
    ADD CONSTRAINT `FK_OrderItem_Product` FOREIGN KEY (`ProductId`) REFERENCES `Product` (`Id`);
 
-ALTER TABLE `Product`
+ALTER TABLE `product`
    ADD CONSTRAINT `FK_Product_Supplier` FOREIGN KEY (`SupplierId`) REFERENCES `Supplier` (`Id`);
 

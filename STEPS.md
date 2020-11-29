@@ -54,7 +54,8 @@ See [STEPS-Server-Core](./STEPS-Server-Core.md) for creating a .NET Core 2 serve
 
 See [STEPS-Server-Core3](./STEPS-Server-Core3.md) for creating a .NET Core 3 server.
 
-<!-- See [STEPS-Server-Node](./STEPS-Server-Node.md) for creating a NodeJS server. -->
+See [STEPS-Server-Node](./STEPS-Server-Node.md) for creating a NodeJS server.
+
 If you want to jump ahead to look at the client apps, see:
 
 - [STEPS-Client-Angular](./STEPS-Client-Angular.md) for an Angular app,
