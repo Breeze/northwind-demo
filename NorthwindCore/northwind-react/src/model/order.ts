@@ -16,9 +16,9 @@ export class Order extends BaseEntity  {
 
   // Generated code. Do not place code below this line.
   id: number;
-  customerId: number;
   orderDate: Date;
   orderNumber: string;
+  customerId: number;
   totalAmount: number;
   customer: Customer;
   orderItems: OrderItem[];

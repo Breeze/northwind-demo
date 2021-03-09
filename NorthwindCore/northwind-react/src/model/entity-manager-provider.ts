@@ -21,7 +21,7 @@ export class EntityManagerProvider {
 
     // configure API endpoint
     const dataService = new DataService({
-      serviceName: "http://localhost:26842/api/breeze",
+      serviceName: "http://localhost:4000/api/breeze",
       hasServerMetadata: false
     });
 
@@ -44,7 +44,7 @@ export class EntityManagerProvider {
         component.forceUpdate();
       }
     });
-    component["subid"] = subid;
+    (component as any).subid = subid;
   }
 
   /** Remove subscription created with subscribeComponent() */

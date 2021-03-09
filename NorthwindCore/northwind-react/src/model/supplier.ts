@@ -15,13 +15,13 @@ export class Supplier extends BaseEntity  {
 
   // Generated code. Do not place code below this line.
   id: number;
-  city: string;
   companyName: string;
   contactName: string;
   contactTitle: string;
+  city: string;
   country: string;
-  fax: string;
   phone: string;
+  fax: string;
   products: Product[];
 }
 

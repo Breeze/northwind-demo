@@ -83,7 +83,17 @@ export class Customers extends React.Component<any, CustState> {
         <div>Country: <input type="text" name="country" value={cust.country || ''} onChange={cust.handleChange} /></div>
         <div>Phone: <input type="text" name="phone" value={cust.phone || ''} onChange={cust.handleChange} /></div>
         <button type="button" onClick={this.remove.bind(this, cust)}>Delete</button>
-      </div>
+      <table style={{margin: 'auto'}}>
+          <tbody>
+            {cust.orders.map(ord =>
+             <tr key={ord.id}>
+              <td>{ord.orderNumber}</td>
+              <td>{ord.orderDate.toDateString()}</td>
+            </tr>)
+            }
+          </tbody>
+        </table>
+</div>
     }
   }
 

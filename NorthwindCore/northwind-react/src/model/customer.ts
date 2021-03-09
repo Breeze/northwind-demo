@@ -15,10 +15,10 @@ export class Customer extends BaseEntity  {
 
   // Generated code. Do not place code below this line.
   id: number;
-  city: string;
-  country: string;
   firstName: string;
   lastName: string;
+  city: string;
+  country: string;
   phone: string;
   orders: Order[];
 }

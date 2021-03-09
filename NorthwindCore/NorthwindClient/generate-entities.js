@@ -7,7 +7,7 @@ if (!fs.existsSync(dir)){
 }
 
 tsGen.generate({
-  inputFileName: '../NorthwindServer/metadata.json',
+  inputFileName: '../NorthwindSequelize/metadata.json',
   outputFolder: dir,
   camelCase: true,
   baseClassName: 'BaseEntity',

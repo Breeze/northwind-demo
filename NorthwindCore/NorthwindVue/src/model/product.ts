@@ -16,12 +16,12 @@ export class Product extends BaseEntity  {
 
   // Generated code. Do not place code below this line.
   id: number;
-  isDiscontinued: boolean;
-  package: string;
   productName: string;
   supplierId: number;
   unitPrice: number;
-  orderItems: OrderItem[];
+  package: string;
+  isDiscontinued: boolean;
   supplier: Supplier;
+  orderItems: OrderItem[];
 }
 

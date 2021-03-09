@@ -18,8 +18,8 @@ export class OrderItem extends BaseEntity  {
   id: number;
   orderId: number;
   productId: number;
-  quantity: number;
   unitPrice: number;
+  quantity: number;
   order: Order;
   product: Product;
 }

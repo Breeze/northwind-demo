@@ -15,6 +15,7 @@ export const options: AutoOptions = {
   caseFile: "l",    // lower_case file names
   caseModel: "p",   // PascalCase model names
   caseProp: "c",    // camelCase property names
+  singularize: true,  // singular model names
   dialect: 'sqlite',  // sqlite | mysql | mssql | postgres
   storage: storage,   // storage is for sqlite only
   directory: models,   // where to write the models

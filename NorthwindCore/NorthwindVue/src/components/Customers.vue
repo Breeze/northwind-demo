@@ -12,6 +12,7 @@
 
   <div v-if="!!selected">
     <h3>Edit</h3>
+    <div>Id: <input type="text" name="id" v-model="selected.id"></div>
     <div>First Name: <input type="text" name="firstName" v-model="selected.firstName"></div>
     <div>Last Name: <input type="text" name="lastName" v-model="selected.lastName"></div>
     <div>City: <input type="text" name="city" v-model="selected.city"></div>
@@ -23,7 +24,7 @@
     <tr v-for="order in selected.orders" :key="order.id">
       <td>{{order.orderNumber}}</td>
       <td>{{order.totalAmount}}</td>
-      <td>{{order.orderDate}}</td>
+      <td>{{order.orderDate }}</td>
       <td><button type="button" @click="remove(order)">Delete</button></td>
     </tr>
   </table>

@@ -16,9 +16,10 @@ export default class Customers extends Vue {
     this.manager = entityManagerProvider.newManager();
     const query = new EntityQuery("Customers").where("lastName", "startsWith", "C").expand("orders");
     this.manager.executeQuery(query).then(qr => {
+      console.log(qr);
       this.customers = qr.results;
     }).catch(err => {
-      console.log(err);
+      console.error(err);
     });
   }
 
@@ -39,7 +40,7 @@ export default class Customers extends Vue {
     this.manager.saveChanges().then(() => {
       // refresh customer list to remove deleted customers
       this.customers = this.manager.getEntities("Customer") as Customer[];
-    });
+    }).catch(err => console.log(err));
   }
 
   rejectChanges() {
