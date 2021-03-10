@@ -58,7 +58,7 @@ import { DbConfig } from "breeze-sequelize/types/dbUtils";
 import { join } from "path";
 import { AutoOptions } from "sequelize-auto";
 
-const storage = join(__dirname, "../northwind.sqlite");  // db file created earlier
+const storage = join(__dirname, "../../northwind.sqlite");  // db file created earlier
 const models = join(__dirname, "./models");  // subdirectory to store model files
 
 export const config: DbConfig = {

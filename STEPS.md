@@ -24,8 +24,8 @@ This is an opinionated approach -- the "productivity path" -- that
 The overall steps for creating our application:
 
 1. Create the directory structure
-2. Create the database
-3. Create the server ([.NET Core 2](./STEPS-Server-Core.md) or [.NET Core 3](./STEPS-Server-Core3.md) or NodeJS)
+2. Create the database (MS SQL Server or MySQL or Postgres or SQLite; see [dbscripts/README](./dbscripts/README.md))
+3. Create the server ([.NET Core 2](./STEPS-Server-Core2.md) or [.NET Core 3](./STEPS-Server-Core3.md) or [NodeJS](./STEPS-Server-Node.md))
 4. Create the client ([Angular](./STEPS-Client-Angular.md), [React](./STEPS-Client-React.md), or [Vue](./STEPS-Client-Vue.md))
 
 Let's get started!
@@ -34,7 +34,7 @@ Let's get started!
 
 Our sample is going to have separate directories for client projects, server projects, and database scripts.  
 
-We'll create subdirectories as we go, but start by creating the root directory.  We'll call it **NorthwindCore**.
+We'll create subdirectories as we go, but start by creating the **client** and **server** root directories.
 
 ## Create the database
 
@@ -42,7 +42,9 @@ It's common to build a new app using an existing database, so we will start by
 creating the sample database.  The sample database we will use is a subset of the 
 classic Microsoft sample db, "Northwind".  
 
-See the README in the [dbscripts](./NorthwindCore/dbscripts) directory and follow the instructions there to create your Northwind database.
+There are scripts to create an instance of the Northwind db for MS SQL Server, MySQL, Postgres, and SQLite.
+
+See the [README](./dbscripts/README.md) in the [dbscripts](./dbscripts) directory and follow the instructions there to create your Northwind database.
 
 Then come back here for the next steps.
 
@@ -50,7 +52,7 @@ Then come back here for the next steps.
 
 Next we'll work on the API server.  
 
-See [STEPS-Server-Core](./STEPS-Server-Core.md) for creating a .NET Core 2 server.
+See [STEPS-Server-Core2](./STEPS-Server-Core2.md) for creating a .NET Core 2 server.
 
 See [STEPS-Server-Core3](./STEPS-Server-Core3.md) for creating a .NET Core 3 server.
 

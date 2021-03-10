@@ -1,6 +1,6 @@
 # Steps for creating .NET Core Breeze Server
 
-Here are some steps to follow to create a new .NET Core 3 + EntityFramework Core 3 backend, using Breeze to handle the data management.
+Here are some steps to follow to create a new .NET Core + EntityFramework backend, using Breeze to handle the data management.
 
 Later, we'll work on a client that talks to our server.
 
@@ -10,7 +10,7 @@ following the steps in the [STEPS](./STEPS.md) document.
 For the server, we'll start with an empty directory, and implement a Breeze API that
 our client can use to query and update data in the database.  Along the way we will:
 
-- Create a .NET Core 3 solution
+- Create a .NET Core solution
 - Create C# entity classes from the database using EF
 - Create an API for interacting with the entity model
 - Create metadata from the entity model
@@ -21,25 +21,23 @@ Here we create the Visual Studio solution and the backend projects.  For this de
 
 1. Create the server project.  
 
-    - In Visual Studio 2019, select File / New / Project...
+    - In Visual Studio, select File / New / Project...
     - Choose project type .NET Core / **ASP.NET Core Web Application**
-    - Set the Project Name to **NorthwindServer**
+    - Set the project Name to **NorthwindServer**
     - Set the Location to the **NorthwindCore** directory that you created earlier
-    - Set the Solution Name to **NorthwindCore3**
-    - Make sure "Place solution and project is the same directory" is NOT checked
-    - Click **Create**, which takes you to the next dialog
-    - Choose **ASP.NET Core 3.1** target
+    - Make sure "Create directory for solution" is checked
+    - Click OK, which takes you to the next dialog
+    - Choose **ASP.NET Core 2.2** target
     - Choose **Empty** web application
-    - Click **Create**.
+    - Click OK
 
 2. Create the model project
 
-    - In the Solution Explorer, right-click on the solution and choose Add / New Project... (or, from the top menu, select File / Add / New Project... )
+    - Right-click on the solution and choose Add / New Project... (or, from the top menu, select File / Add / New Project... )
     - Choose project type .NET Standard / **Class Library (.NET Standard).**
-    - Click Next
     - Set the project Name to **NorthwindModel**
-    - Set the Location to the **NorwindCore3** directory that was created for the solution
-    - Click Create
+    - Set the Location to the **NorwindCore/NorthwindServer** directory that was created for the solution
+    - Click OK
 
 3. Add a reference to the model project
 
@@ -54,22 +52,18 @@ Here we create the Visual Studio solution and the backend projects.  For this de
     - Set Default project to **NorthwindServer**
     - `Install-Package Breeze.AspNetCore.NetCore`
     - `Install-Package Breeze.Persistence.EFCore`
-    - `Install-Package Microsoft.EntityFrameworkCore.Tools`
-    - `Install-Package Microsoft.AspNetCore.Mvc.NewtonsoftJson`
-    - `Install-Package Bricelam.EntityFrameworkCore.Pluralizer`
 
 5. Add Nuget packages to the model project.  These support using Entity Framework
 for data access and data model creation.
 
     - Select Tools / Nuget Package Manager / Package Manager Console
     - Set Default project to **NorthwindModel**
+    - `Install-Package Bricelam.EntityFrameworkCore.Pluralizer`
     - `Install-Package Microsoft.EntityFrameworkCore.SqlServer`
 
 ## Create the data model
 
 We will create the data model classes from the database schema.  For this, we need a connection string for connecting to the database.  The commands below assume a local SQL Express instance; if you are using a separate server, you will need to change the Data Source and the security information in the connection string.
-
-> If you haven't created the database yet, go back to the [STEPS](./STEPS.md) document and see the **Create the database** section.
 
 1. Select Tools / Nuget Package Manager / Package Manager Console
 2. Set Default project to **NorthwindModel**
@@ -123,7 +117,6 @@ using System.Linq;
   [BreezeQueryFilter]
   public class BreezeController : Controller
 ```
-Note that the `Route` attribute specifies the `[action]` as part of the path.
 
 ### Add the Persistence Manager to the BreezeController
 
@@ -138,7 +131,7 @@ Add a new `persistenceManager` field to the `BreezeController` class, and add a 
 
 ### Add query methods to the BreezeController
 
-Add a HttpGet method returning `IQueryable<>` for each of the `Customer`, `Order`, `Product`, and `Supplier` types in the data model.  We won't do one for `OrderItem` because we will only query those with an `Order`
+Add a HttpGet method returning `IQueryable<>` for each of the `Customer`, `Order`, `Product`, and `Supplier` types in the data model.  We won't do one for `OrderItem` because we will only query those with and `Order`
 ```
   [HttpGet]
   public IQueryable<Customer> Customers()
@@ -223,14 +216,13 @@ public void ConfigureServices(IServiceCollection services)
 {
     var mvcBuilder = services.AddMvc();
 
-    services.AddControllers().AddNewtonsoftJson(opt => {
+    mvcBuilder.AddJsonOptions(opt => {
         // Set Breeze defaults for entity serialization
         var ss = JsonSerializationFns.UpdateWithDefaults(opt.SerializerSettings);
         if (ss.ContractResolver is DefaultContractResolver resolver)
         {
             resolver.NamingStrategy = null;  // remove json camelCasing; names are converted on the client.
         }
-        ss.Formatting = Newtonsoft.Json.Formatting.Indented; // format JSON for debugging
     });
     // Add Breeze exception filter to send errors back to the client
     mvcBuilder.AddMvcOptions(o => { o.Filters.Add(new GlobalExceptionFilter()); });
@@ -240,17 +232,14 @@ public void ConfigureServices(IServiceCollection services)
     services.AddDbContext<NorthwindCoreContext>(options => options.UseSqlServer(connectionString));
 }
 ```
-In the `Configure` method, add CORS, and add `MapControllers` to the `app.UseEndpoints()` statement.  Note
-that the order of the statements is important in this method.
+In the `Configure` method, remove the existing `app.Run()` statement.  Then configure CORS and turn on MVC:
 ```
-public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+public void Configure(IApplicationBuilder app, IHostingEnvironment env)
 {
     if (env.IsDevelopment())
     {
         app.UseDeveloperExceptionPage();
     }
-
-    app.UseRouting();
 
     // Allow any host - development only!
     app.UseCors(builder => builder
@@ -260,14 +249,7 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         .AllowCredentials()
     );
 
-    app.UseEndpoints(endpoints =>
-    {
-        endpoints.MapControllers();
-        endpoints.MapGet("/", async context =>
-        {
-            await context.Response.WriteAsync("Hello World!");
-        });
-    });
+    app.UseMvc();
 }
 ```
 
@@ -292,15 +274,15 @@ public static void Main(string[] args)
     else
     {
         // Start web server
-        CreateHostBuilder(args).Build().Run();
+        CreateWebHostBuilder(args).Build().Run();
     }
 }
 ```
 ## Generate the metadata
 
-Compile the solution, then open a command prompt in the `NorthwindCore3` directory.  Then run:
+Compile the solution, then open a command prompt in the `NorthwindCore2/NorthwindServer` directory.  Then run:
 
-`dotnet NorthwindServer\bin\Debug\netcoreapp3.1\NorthwindServer.dll metadata > ..\metadata.json`
+`dotnet NorthwindServer\bin\Debug\netcoreapp2.2\NorthwindServer.dll metadata > ..\metadata.json`
 
 _NOTE: Switch separators to `/` for OSX or Linux._
 
@@ -315,7 +297,7 @@ We'll use the `metadata.json` file later when we create the web client.
 ## Testing the server
 
 Compile and run the solution.  It should open a browser and attempt to open a page on the default port, e.g http://localhost:33028 ,
-which should return "Hello World" due to `endpoints.MapGet` in `Startup.cs`.  That's okay; let's test a Breeze query.
+but it may return a 404 error because we haven't enabled static pages.  That's okay; let's test a Breeze query.
 
 Change the URL to http://localhost:{port}/api/breeze/customers
 
@@ -364,7 +346,7 @@ If everything looks good on the server, we are ready to work on the client appli
 
 For an Angular app, see [STEPS-Client-Angular](./STEPS-Client-Angular.md).
 
-For a React app see [STEPS-Client-React](./STEPS-Client-React.md).
+<!-- For a React app see [STEPS-Client-React](./STEPS-Client-React.md). -->
 
-For a Vue app see, [STEPS-Client-Vue](./STEPS-Client-Vue.md).
+<!-- For a Vue app see, [STEPS-Client-Vue](./STEPS-Client-Vue.md). -->
 
