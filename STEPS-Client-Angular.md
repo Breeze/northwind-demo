@@ -19,15 +19,15 @@ To create the initial shell of the Angular app, we will use the Angular CLI as i
 
 First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.npmjs.com/) installed.
 
-Next, open a command prompt in the `NorthwindCore` directory, and follow the steps below:
+Next, open a command prompt in the `client` directory, and follow the steps below:
 
-1. `npx @angular/cli new NorthwindClient`
+1. `npx @angular/cli new northwind-angular`
   - Would you like to add Angular routing? **Y**
   - Which stylesheet format would you like to use? **CSS**
 
-Now you should have a `NorthwindCore/NorthwindClient` directory containing the Angular app.  Try it out:
+Now you should have a `client/northwind-angular` directory containing the Angular app.  Try it out:
 
-`cd NorthwindClient`
+`cd northwind-angular`
 `ng serve --open`
 
 This will compile the app and open a browser on http://localhost:4200 with a welcome page.  
@@ -40,7 +40,7 @@ Stop the server from the command line using Ctrl-C.
 
 Now we'll add Breeze to the app, so we can query entities from the server and update them.
 
-Start by adding the npm packages.  In the `NorthwindClient` directory, run:
+Start by adding the npm packages.  In the `northwind-angular` directory, run:
 
 `npm install breeze-client breeze-entity-generator`
 
@@ -50,9 +50,9 @@ When developing our app, it's helpful to have TypeScript classes to represent th
 
 #### Create the base class
 
-In the `NorthwindClient/src/app` directory, create a new directory, `model`.  
+In the `northwind-angular/src/app` directory, create a new directory, `model`.  
 
-Then, in `NorthwindClient/src/app/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
+Then, in `northwind-angular/src/app/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
 ```
 import { Entity, EntityAspect, EntityType } from 'breeze-client';
 
@@ -69,7 +69,7 @@ You should already have a `metadata.json` file in the `NorthwindServer` project 
 If you don't, see the "Generate the metadata" topic in the server document.
 
 #### Generate entities from metadata
-To turn the metadata into entities, we need to write a script.  In the `NorthwindClient` directory,
+To turn the metadata into entities, we need to write a script.  In the `northwind-angular` directory,
 create a file called `generate-entities.js`.
 
 Fill `generate-entities.js` with the following:
@@ -95,7 +95,7 @@ Then run the file with
 
 `node generate-entities.js`
 
-This should create files in the `NorthwindClient/src/app/model` directory:
+This should create files in the `northwind-angular/src/app/model` directory:
 ```
 customer.ts
 entity-model.ts
@@ -115,7 +115,7 @@ and by changing the template files.  See `node_modules/breeze-entity-generator/R
 
 Now we need to register the Breeze adapters to work with Angular.  
 
-Edit `NorthwindClient\src\app\app.module.ts`.  At the top of the file, add the following imports:
+Edit `northwind-angular\src\app\app.module.ts`.  At the top of the file, add the following imports:
 ```
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -178,7 +178,7 @@ it easy, we will create a service called the EntityManagerProvider.
 _In a real project, now would be a good time to start creating submodules.  For this demo, we will keep everything in one
 module for simplicity._
 
-Create the file `NorthwindClient/src/app/entity-manager-provider.ts`.  In the file, put:
+Create the file `northwind-angular/src/app/entity-manager-provider.ts`.  In the file, put:
 ```
 import { Injectable } from '@angular/core';
 import { DataService, EntityManager } from 'breeze-client';
@@ -214,7 +214,7 @@ When we need an EntityManager, we call the `newManager()` method.
 
 ## Create the Customer component
 
-Now create a component to display some customer data.  Open a command prompt in the `NorthwindClient` directory, and execute the command:
+Now create a component to display some customer data.  Open a command prompt in the `northwind-angular` directory, and execute the command:
 
 `ng generate component customer`
 
@@ -251,7 +251,7 @@ The first route will load the CustomerComponent into the `router-outlet` if the 
 
 The second route will redirect to /customers if the current url doesn't match any other route.  Since there are no other routes, our CustomerComponent should always be displayed.
 
-Try it now: if the app is not already running, open a command prompt in the `NorthwindClient` directory and run:
+Try it now: if the app is not already running, open a command prompt in the `northwind-angular` directory and run:
 
 `ng serve --open`
 
@@ -423,7 +423,7 @@ as queries and saves are sent.
 
 We have come to the end of our journey.  
 
-We've created a Angular 8 + Breeze application from the ground up,
+We've created a Angular + Breeze application from the ground up,
 using tools to create a simple entity model from the database for both the client and server parts of the application.
 
 We now have an application that can create, read, update, and delete data.  It's ready for an improved UI, 

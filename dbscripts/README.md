@@ -18,7 +18,7 @@ The scripts assume one of:
 
 1. Copy contents of the `dbscripts` folder from the sample repo into your own `dbscripts` folder.
 
-2. Use the administration tool for your DBMS to create the database.
+2. Use the administration tool for your DBMS to create a database named "Northwind".
   
     - **mssql**: SQL Server Management Studio
     - **mysql**: MySQL Workbench

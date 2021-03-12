@@ -1,4 +1,4 @@
-# NorthwindVue
+# northwind-vue
 
 ## Project setup
 ```

@@ -36,8 +36,8 @@ namespace NorthwindServer
             mvcBuilder.AddMvcOptions(o => { o.Filters.Add(new GlobalExceptionFilter()); });
 
             // Add DbContext using connection string
-            var connectionString = configuration.GetConnectionString("NorthwindCore");
-            services.AddDbContext<NorthwindCoreContext>(options => options.UseSqlServer(connectionString));
+            var connectionString = configuration.GetConnectionString("Northwind");
+            services.AddDbContext<NorthwindContext>(options => options.UseSqlServer(connectionString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -15,7 +15,7 @@ Along the way we will:
 
 # Coming soon
 
-In the meantime, you can look at the [NorthwinVue demo app](https://github.com/Breeze/northwind-demo/tree/master/NorthwindCore/NorthwindVue).
+In the meantime, you can look at the [northwind-vue demo app](https://github.com/Breeze/northwind-demo/tree/master/client/northwind-vue).
 <hr>
 If you have problems with this demo, please create issues in this github repo.
 

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "NorthwindClient": {
+    "northwind-angular": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/NorthwindClient",
+            "outputPath": "dist/northwind-angular",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": "src/polyfills.ts",
@@ -63,18 +63,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "NorthwindClient:build"
+            "browserTarget": "northwind-angular:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "NorthwindClient:build:production"
+              "browserTarget": "northwind-angular:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "NorthwindClient:build"
+            "browserTarget": "northwind-angular:build"
           }
         },
         "test": {
@@ -111,15 +111,15 @@
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
             "protractorConfig": "e2e/protractor.conf.js",
-            "devServerTarget": "NorthwindClient:serve"
+            "devServerTarget": "northwind-angular:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "NorthwindClient:serve:production"
+              "devServerTarget": "northwind-angular:serve:production"
             }
           }
         }
       }
     }},
-  "defaultProject": "NorthwindClient"
+  "defaultProject": "northwind-angular"
 }

@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace NorthwindModel.Models
 {
-    public partial class NorthwindCoreContext : DbContext
+    public partial class NorthwindContext : DbContext
     {
-        public NorthwindCoreContext()
+        public NorthwindContext()
         {
         }
 
-        public NorthwindCoreContext(DbContextOptions<NorthwindCoreContext> options)
+        public NorthwindContext(DbContextOptions<NorthwindContext> options)
             : base(options)
         {
         }
@@ -26,14 +26,12 @@ namespace NorthwindModel.Models
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-                optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=NorthwindCore;Integrated Security=True;MultipleActiveResultSets=True");
+                optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True");
             }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasAnnotation("ProductVersion", "2.2.6-servicing-10079");
-
             modelBuilder.Entity<Customer>(entity =>
             {
                 entity.HasIndex(e => new { e.LastName, e.FirstName })
@@ -153,6 +151,10 @@ namespace NorthwindModel.Models
 
                 entity.Property(e => e.Phone).HasMaxLength(30);
             });
+
+            OnModelCreatingPartial(modelBuilder);
         }
+
+        partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
     }
 }

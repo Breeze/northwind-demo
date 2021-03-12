@@ -7,11 +7,11 @@ Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on h
   - NodeJS with Sequelize
   
 **Client** is one of 
-  - Angular 8
+  - Angular
   - React
   - Vue
 
-See the [NorthwindCore](NorthwindCore) directory for the complete sample projects.
+See the [client](client) and [server](server) directories for the complete sample projects.  Any of the clients can work with any of the servers.
 
 See the [STEPS](STEPS.md) document for the steps to create the sample from scratch.
 

@@ -19,11 +19,11 @@ To create the initial shell of the React app, we will use the React CLI as instr
 
 First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.npmjs.com/) installed.
 
-Next, open a command prompt in the `NorthwindCore` directory, and follow the steps below:
+Next, open a command prompt in the `client` directory, and follow the steps below:
 
 1. `npx create-react-app northwind-react --typescript --use-npm`
 
-Now you should have a `NorthwindCore/northwind-react` directory containing the React app.  Try it out:
+Now you should have a `client/northwind-react` directory containing the React app.  Try it out:
 
 `cd northwind-react`
 `npm start`

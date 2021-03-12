@@ -4,7 +4,7 @@ Here are some steps to follow to create a new .NET Core + EntityFramework backen
 
 Later, we'll work on a client that talks to our server.
 
-We will assume that you've already created the database and the **NorthwindCore** directory,
+We will assume that you've already created the database and the **server** directory,
 following the steps in the [STEPS](./STEPS.md) document.
 
 For the server, we'll start with an empty directory, and implement a Breeze API that
@@ -24,7 +24,8 @@ Here we create the Visual Studio solution and the backend projects.  For this de
     - In Visual Studio, select File / New / Project...
     - Choose project type .NET Core / **ASP.NET Core Web Application**
     - Set the project Name to **NorthwindServer**
-    - Set the Location to the **NorthwindCore** directory that you created earlier
+    - Set the Location to the **server** directory that you created earlier
+    - Set the Solution Name to **NorthwindCore2**
     - Make sure "Create directory for solution" is checked
     - Click OK, which takes you to the next dialog
     - Choose **ASP.NET Core 2.2** target
@@ -36,7 +37,7 @@ Here we create the Visual Studio solution and the backend projects.  For this de
     - Right-click on the solution and choose Add / New Project... (or, from the top menu, select File / Add / New Project... )
     - Choose project type .NET Standard / **Class Library (.NET Standard).**
     - Set the project Name to **NorthwindModel**
-    - Set the Location to the **NorwindCore/NorthwindServer** directory that was created for the solution
+    - Set the Location to the **server/NorthwindServer** directory that was created for the solution
     - Click OK
 
 3. Add a reference to the model project
@@ -67,10 +68,10 @@ We will create the data model classes from the database schema.  For this, we ne
 
 1. Select Tools / Nuget Package Manager / Package Manager Console
 2. Set Default project to **NorthwindModel**
-3. `Scaffold-DbContext "Data Source=.;Initial Catalog=NorthwindCore;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force`
+3. `Scaffold-DbContext "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force`
     - (The command above should all be on one line)
 
-Now you should have a **Models** folder in the **NorthwindModel** project, which contains classes for each of the NorthwindCore database tables, and a `NorthwindCoreContext.cs` that contains the EF DbContext class for accessing the database.
+Now you should have a **Models** folder in the **NorthwindModel** project, which contains classes for each of the Northwind database tables, and a `NorthwindContext.cs` that contains the EF DbContext class for accessing the database.
 
 If you change the database schema, you can re-run the Scaffold-DbContext command to re-build the model classes.
 
@@ -79,7 +80,7 @@ If you change the database schema, you can re-run the Scaffold-DbContext command
 The PersistenceManager is a Breeze class that wraps the DbContext to provide Breeze data management.  We will create it in the **NorthwindServer** project
 
 1. Right-click on the **NorthwindServer** project and select Add / Class...
-2. Name the class `NorthwindCorePersistenceManager.cs` and click Add.  This will create the class file.
+2. Name the class `NorthwindPersistenceManager.cs` and click Add.  This will create the class file.
 3. In the class file, remove the default `using` statements and replace them with 
 ```
 using Breeze.Persistence.EFCore;
@@ -87,11 +88,11 @@ using NorthwindModel.Models;
 ```
 4. Make the class extend EFPersistenceManager
 ```
-public class NorthwindCorePersistenceManager : EFPersistenceManager<NorthwindCoreContext>
+public class NorthwindPersistenceManager : EFPersistenceManager<NorthwindContext>
 ```
 5. Add a constructor to create it from our DbContext
 ```
-public NorthwindCorePersistenceManager(NorthwindCoreContext dbContext) : base(dbContext) {}
+public NorthwindPersistenceManager(NorthwindContext dbContext) : base(dbContext) {}
 ```
 
 ## Add a Breeze controller
@@ -120,12 +121,12 @@ using System.Linq;
 
 ### Add the Persistence Manager to the BreezeController
 
-Add a new `persistenceManager` field to the `BreezeController` class, and add a constructor that takes a NorthwindCoreContext and sets the `persistenceManager` field.  This will be called by dependency injection.
+Add a new `persistenceManager` field to the `BreezeController` class, and add a constructor that takes a NorthwindContext and sets the `persistenceManager` field.  This will be called by dependency injection.
 ```
-  private NorthwindCorePersistenceManager persistenceManager;
-  public BreezeController(NorthwindCoreContext dbContext)
+  private NorthwindPersistenceManager persistenceManager;
+  public BreezeController(NorthwindContext dbContext)
   {
-      persistenceManager = new NorthwindCorePersistenceManager(dbContext);
+      persistenceManager = new NorthwindPersistenceManager(dbContext);
   }
 ```
 
@@ -173,7 +174,7 @@ Now make sure the solution compiles.  Don't run it yet, there are a few more thi
 Add the connection string to the `appsettings.json` file
 ```
   "ConnectionStrings": {
-    "NorthwindCore": "Data Source=.;Initial Catalog=NorthwindCore;Integrated Security=True;MultipleActiveResultSets=True"
+    "Northwind": "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True"
   },
 ```
 
@@ -228,8 +229,8 @@ public void ConfigureServices(IServiceCollection services)
     mvcBuilder.AddMvcOptions(o => { o.Filters.Add(new GlobalExceptionFilter()); });
 
     // Add DbContext using connection string
-    var connectionString = configuration.GetConnectionString("NorthwindCore");
-    services.AddDbContext<NorthwindCoreContext>(options => options.UseSqlServer(connectionString));
+    var connectionString = configuration.GetConnectionString("Northwind");
+    services.AddDbContext<NorthwindContext>(options => options.UseSqlServer(connectionString));
 }
 ```
 In the `Configure` method, remove the existing `app.Run()` statement.  Then configure CORS and turn on MVC:
@@ -266,8 +267,8 @@ public static void Main(string[] args)
     if (args.Length > 0 && args[0].Contains("metadata"))
     {
         // Generate metadata and exit
-        var dbContext = new NorthwindCoreContext();
-        var persistenceManager = new NorthwindCorePersistenceManager(dbContext);
+        var dbContext = new NorthwindContext();
+        var persistenceManager = new NorthwindPersistenceManager(dbContext);
         var metadata = persistenceManager.Metadata();
         Console.Out.WriteLine(metadata);
     }
@@ -303,7 +304,7 @@ Change the URL to http://localhost:{port}/api/breeze/customers
 
 _You can see the configured ports in NorthwindServer\Properties\launchSettings.json_
 
-Now you should get a JSON result containing all the rows from the Customers table in the NorthwindCore database:
+Now you should get a JSON result containing all the rows from the Customers table in the Northwind database:
 ```
 [
   {

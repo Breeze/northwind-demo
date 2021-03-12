@@ -7,7 +7,7 @@ We will write it in [TypeScript](https://www.typescriptlang.org/) because it hel
 
 Later, we'll work on a client that talks to our server.
 
-We will assume that you've already created the database and the **NorthwindCore** directory,
+We will assume that you've already created the database and the **server** directory,
 following the steps in the [STEPS](./STEPS.md) document.
 
 For the server, we'll start with an empty directory, and implement a Breeze API that
@@ -22,7 +22,7 @@ our client can use to query and update data in the database.  Along the way we w
 
 First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.npmjs.com/) installed.
 
-Next, create a directory to hold our server.  Create it under **NorthwindCore**, and call it **NorthwindSequelize**.
+Next, create a directory to hold our server.  Create it under **server**, and call it **NorthwindSequelize**.
 
 ## Install the packages 
 

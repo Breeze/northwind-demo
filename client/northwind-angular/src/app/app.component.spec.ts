@@ -20,16 +20,16 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have as title 'NorthwindClient'`, () => {
+  it(`should have as title 'northwind-angular'`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.debugElement.componentInstance;
-    expect(app.title).toEqual('NorthwindClient');
+    expect(app.title).toEqual('northwind-angular');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.debugElement.nativeElement;
-    expect(compiled.querySelector('.content span').textContent).toContain('NorthwindClient app is running!');
+    expect(compiled.querySelector('.content span').textContent).toContain('northwind-angular app is running!');
   });
 });

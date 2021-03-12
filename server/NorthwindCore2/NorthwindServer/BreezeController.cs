@@ -11,10 +11,10 @@ namespace NorthwindServer
     [BreezeQueryFilter]
     public class BreezeController : Controller
     {
-        private NorthwindCorePersistenceManager persistenceManager;
-        public BreezeController(NorthwindCoreContext dbContext)
+        private NorthwindPersistenceManager persistenceManager;
+        public BreezeController(NorthwindContext dbContext)
         {
-            persistenceManager = new NorthwindCorePersistenceManager(dbContext);
+            persistenceManager = new NorthwindPersistenceManager(dbContext);
         }
 
         [HttpGet]
