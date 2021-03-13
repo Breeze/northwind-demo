@@ -5,7 +5,7 @@ Here are some steps to follow to create a new .NET Core + EntityFramework backen
 Later, we'll work on a client that talks to our server.
 
 We will assume that you've already created the database and the **server** directory,
-following the steps in the [STEPS](./STEPS.md) document.
+following the steps in the [STEPS](../STEPS.md) document.
 
 For the server, we'll start with an empty directory, and implement a Breeze API that
 our client can use to query and update data in the database.  Along the way we will:
@@ -345,9 +345,4 @@ If you don't see the `$id` and `$type`, go back to the `Startup.cs` file and mak
 
 If everything looks good on the server, we are ready to work on the client application.
 
-For an Angular app, see [STEPS-Client-Angular](./STEPS-Client-Angular.md).
-
-<!-- For a React app see [STEPS-Client-React](./STEPS-Client-React.md). -->
-
-<!-- For a Vue app see, [STEPS-Client-Vue](./STEPS-Client-Vue.md). -->
-
+Go to the [README](../client/README.md) in the [client](../client) directory to start your client app.

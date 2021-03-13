@@ -5,7 +5,7 @@ Here are some steps to follow to create a new .NET Core 3 + EntityFramework Core
 Later, we'll work on a client that talks to our server.
 
 We will assume that you've already created the database and the **server** directory,
-following the steps in the [STEPS](./STEPS.md) document.
+following the steps in the [STEPS](../STEPS.md) document.
 
 For the server, we'll start with an empty directory, and implement a Breeze API that
 our client can use to query and update data in the database.  Along the way we will:
@@ -69,7 +69,7 @@ for data access and data model creation.
 
 We will create the data model classes from the database schema.  For this, we need a connection string for connecting to the database.  The commands below assume a local SQL Express instance; if you are using a separate server, you will need to change the Data Source and the security information in the connection string.
 
-> If you haven't created the database yet, go back to the [STEPS](./STEPS.md) document and see the **Create the database** section.
+> If you haven't created the database yet, go back to the [STEPS](../STEPS.md) document and see the **Create the database** section.
 
 1. Select Tools / Nuget Package Manager / Package Manager Console
 2. Set Default project to **NorthwindModel**
@@ -362,9 +362,4 @@ If you don't see the `$id` and `$type`, go back to the `Startup.cs` file and mak
 
 If everything looks good on the server, we are ready to work on the client application.
 
-For an Angular app, see [STEPS-Client-Angular](./STEPS-Client-Angular.md).
-
-For a React app see [STEPS-Client-React](./STEPS-Client-React.md).
-
-For a Vue app see, [STEPS-Client-Vue](./STEPS-Client-Vue.md).
-
+Go to the [README](../client/README.md) in the [client](../client) directory to start your client app.

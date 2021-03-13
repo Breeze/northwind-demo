@@ -2,7 +2,7 @@
 
 Here are some steps to follow to create a new [Angular](https://angular.io) 8 application, using Breeze to handle the data management.
 
-We will assume that you've already got the server side created, following the outline described in the [STEPS](STEPS.md) document.
+We will assume that you've already got the server side created, following the outline described in the [STEPS](../STEPS.md) document.
 
 For the client, we will start with an empty directory and build an application that
 talks to the server, using Breeze to query and update data.
@@ -259,7 +259,8 @@ You should see a screen that says "Northwind" followed by "customer works!".
 
 ### Start the server
 
-Start the `NorthwindServer` project now, so it will be available to serve data requests.
+Start the server project now (`NorthwindServer` or `NorthwindSequelize`), so it will be available to serve data requests.  If you haven't created the server,
+refer back to the [STEPS](../STEPS.md) document.
 
 ### Get Customer data
 

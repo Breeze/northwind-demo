@@ -8,7 +8,7 @@ We will write it in [TypeScript](https://www.typescriptlang.org/) because it hel
 Later, we'll work on a client that talks to our server.
 
 We will assume that you've already created the database and the **server** directory,
-following the steps in the [STEPS](./STEPS.md) document.
+following the steps in the [STEPS](../STEPS.md) document.
 
 For the server, we'll start with an empty directory, and implement a Breeze API that
 our client can use to query and update data in the database.  Along the way we will:
@@ -41,7 +41,7 @@ MySQL/MariaDB | `npm install mysql2`
 Postgres | `npm install pg pg-hstore`
 SQLite | `npm install sqlite3`
 
-If you haven't installed the database yet, go back to the [STEPS](./STEPS.md) document.
+If you haven't installed the database yet, go back to the [STEPS](../STEPS.md) document.
 
 > If you don't have a database preference, we recommend **SQLite** for this project because it requires no installation except for the `sqlite3` package.
 
@@ -332,5 +332,5 @@ To create this server, we have:
 6. Created an Express server
 7. Tested a query
 
-If everything is working, now we are ready to create our client application.  Refer back to the [STEPS](./STEPS.md) document and choose which type of client to create.
+If everything is working, now we are ready to create our client application.  Refer back to the [STEPS](../STEPS.md) document and choose which type of client to create.
 

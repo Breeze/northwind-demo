@@ -52,14 +52,14 @@ Then come back here for the next steps.
 
 Next we'll work on the API server.  
 
-See [STEPS-Server-Core2](./STEPS-Server-Core2.md) for creating a .NET Core 2 server.
+See [STEPS-Server-Core2](server/STEPS-Server-Core2.md) for creating a .NET Core 2 server.
 
-See [STEPS-Server-Core3](./STEPS-Server-Core3.md) for creating a .NET Core 3 server.
+See [STEPS-Server-Core3](server/STEPS-Server-Core3.md) for creating a .NET Core 3 server.
 
-See [STEPS-Server-Node](./STEPS-Server-Node.md) for creating a NodeJS server.
+See [STEPS-Server-Node](server/STEPS-Server-Node.md) for creating a NodeJS server.
 
 If you want to jump ahead to look at the client apps, see:
 
-- [STEPS-Client-Angular](./STEPS-Client-Angular.md) for an Angular app,
-- [STEPS-Client-React](./STEPS-Client-React.md) for a React app,
-- [STEPS-Client-Vue](./STEPS-Client-Vue.md) for a Vue app
+- [STEPS-Client-Angular](client/STEPS-Client-Angular.md) for an Angular app,
+- [STEPS-Client-React](client/STEPS-Client-React.md) for a React app,
+- [STEPS-Client-Vue](client/STEPS-Client-Vue.md) for a Vue app
