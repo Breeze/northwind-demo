@@ -8,8 +8,9 @@ Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on h
   - Vue
 
 **Server** is one of
-  - .NET Core 2.2 with EFCore 2
+  - .NET 5 with EFCore 5
   - .NET Core 3.1 with EFCore 3
+  - .NET Core 2.2 with EFCore 2
   - NodeJS with Sequelize
   
 **Northwind** is the name of a fictional food merchant.  The Northwind [database](./dbscripts/README.md) is a simple relational model suitable for a demo.

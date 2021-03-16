@@ -25,8 +25,8 @@ The overall steps for creating our application:
 
 1. Create the directory structure
 2. Create the database (MS SQL Server or MySQL or Postgres or SQLite; see [dbscripts/README](./dbscripts/README.md))
-3. Create the server ([.NET Core 2](./STEPS-Server-Core2.md) or [.NET Core 3](./STEPS-Server-Core3.md) or [NodeJS](./STEPS-Server-Node.md))
-4. Create the client ([Angular](./STEPS-Client-Angular.md), [React](./STEPS-Client-React.md), or [Vue](./STEPS-Client-Vue.md))
+3. Create the server ([.NET 5](server/STEPS-Server-NET5.md) or [.NET Core 3](server/STEPS-Server-Core3.md) or [2](server/STEPS-Server-Core2.md) or [NodeJS](server/STEPS-Server-Node.md))
+4. Create the client ([Angular](client/STEPS-Client-Angular.md), [React](client/STEPS-Client-React.md), or [Vue](client/STEPS-Client-Vue.md))
 
 Let's get started!
 
@@ -52,9 +52,11 @@ Then come back here for the next steps.
 
 Next we'll work on the API server.  
 
-See [STEPS-Server-Core2](server/STEPS-Server-Core2.md) for creating a .NET Core 2 server.
+See [STEPS-Server-NET5](server/STEPS-Server-NET5.md) for creating a .NET 5 server.
 
 See [STEPS-Server-Core3](server/STEPS-Server-Core3.md) for creating a .NET Core 3 server.
+
+See [STEPS-Server-Core2](server/STEPS-Server-Core2.md) for creating a .NET Core 2 server.
 
 See [STEPS-Server-Node](server/STEPS-Server-Node.md) for creating a NodeJS server.
 
@@ -63,3 +65,11 @@ If you want to jump ahead to look at the client apps, see:
 - [STEPS-Client-Angular](client/STEPS-Client-Angular.md) for an Angular app,
 - [STEPS-Client-React](client/STEPS-Client-React.md) for a React app,
 - [STEPS-Client-Vue](client/STEPS-Client-Vue.md) for a Vue app
+
+<hr>
+
+If you have problems with this demo, please create issues in this github repo.
+
+If you have questions about Breeze, please ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/breeze).
+
+If you need help developing your application, please contact us at [IdeaBlade](mailto:info@ideablade.com).
