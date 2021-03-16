@@ -20,22 +20,22 @@ namespace NorthwindServer
         [HttpGet]
         public IQueryable<Customer> Customers()
         {
-            return persistenceManager.Context.Customer;
+            return persistenceManager.Context.Customers;
         }
         [HttpGet]
         public IQueryable<Order> Orders()
         {
-            return persistenceManager.Context.Order;
+            return persistenceManager.Context.Orders;
         }
         [HttpGet]
         public IQueryable<Product> Products()
         {
-            return persistenceManager.Context.Product;
+            return persistenceManager.Context.Products;
         }
         [HttpGet]
         public IQueryable<Supplier> Suppliers()
         {
-            return persistenceManager.Context.Supplier;
+            return persistenceManager.Context.Suppliers;
         }
 
         [HttpPost]

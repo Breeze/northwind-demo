@@ -15,11 +15,11 @@ namespace NorthwindModel.Models
         {
         }
 
-        public virtual DbSet<Customer> Customer { get; set; }
-        public virtual DbSet<Order> Order { get; set; }
-        public virtual DbSet<OrderItem> OrderItem { get; set; }
-        public virtual DbSet<Product> Product { get; set; }
-        public virtual DbSet<Supplier> Supplier { get; set; }
+        public virtual DbSet<Customer> Customers { get; set; }
+        public virtual DbSet<Order> Orders { get; set; }
+        public virtual DbSet<OrderItem> OrderItems { get; set; }
+        public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<Supplier> Suppliers { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -36,6 +36,8 @@ namespace NorthwindModel.Models
 
             modelBuilder.Entity<Customer>(entity =>
             {
+                entity.ToTable("Customer");
+
                 entity.HasIndex(e => new { e.LastName, e.FirstName })
                     .HasName("IndexCustomerName");
 
@@ -56,6 +58,8 @@ namespace NorthwindModel.Models
 
             modelBuilder.Entity<Order>(entity =>
             {
+                entity.ToTable("Order");
+
                 entity.HasIndex(e => e.CustomerId)
                     .HasName("IndexOrderCustomerId");
 
@@ -81,6 +85,8 @@ namespace NorthwindModel.Models
 
             modelBuilder.Entity<OrderItem>(entity =>
             {
+                entity.ToTable("OrderItem");
+
                 entity.HasIndex(e => e.OrderId)
                     .HasName("IndexOrderItemOrderId");
 
@@ -106,6 +112,8 @@ namespace NorthwindModel.Models
 
             modelBuilder.Entity<Product>(entity =>
             {
+                entity.ToTable("Product");
+
                 entity.HasIndex(e => e.ProductName)
                     .HasName("IndexProductName");
 
@@ -131,6 +139,8 @@ namespace NorthwindModel.Models
 
             modelBuilder.Entity<Supplier>(entity =>
             {
+                entity.ToTable("Supplier");
+
                 entity.HasIndex(e => e.CompanyName)
                     .HasName("IndexSupplierName");
 

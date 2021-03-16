@@ -68,7 +68,7 @@ We will create the data model classes from the database schema.  For this, we ne
 
 1. Select Tools / Nuget Package Manager / Package Manager Console
 2. Set Default project to **NorthwindModel**
-3. `Scaffold-DbContext "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force`
+3. `Scaffold-DbContext "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -Force`
     - (The command above should all be on one line)
 
 Now you should have a **Models** folder in the **NorthwindModel** project, which contains classes for each of the Northwind database tables, and a `NorthwindContext.cs` that contains the EF DbContext class for accessing the database.
@@ -177,6 +177,14 @@ Add the connection string to the `appsettings.json` file
     "Northwind": "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True"
   },
 ```
+
+## Set the port number
+
+Change the default port numbers to **4000** in all the `applicationUrl` settings inside `Properties/launchSettings.json`.
+```
+    "applicationUrl": "http://localhost:4000",
+```
+
 
 ## Configure the Startup class
 
@@ -297,12 +305,10 @@ We'll use the `metadata.json` file later when we create the web client.
 
 ## Testing the server
 
-Compile and run the solution.  It should open a browser and attempt to open a page on the default port, e.g http://localhost:33028 ,
+Compile and run the solution.  It should open a browser and attempt to open a page on the default port, e.g http://localhost:4000 ,
 but it may return a 404 error because we haven't enabled static pages.  That's okay; let's test a Breeze query.
 
-Change the URL to http://localhost:{port}/api/breeze/customers
-
-_You can see the configured ports in NorthwindServer\Properties\launchSettings.json_
+Change the URL to http://localhost:4000/api/breeze/customers
 
 Now you should get a JSON result containing all the rows from the Customers table in the Northwind database:
 ```
@@ -324,7 +330,7 @@ Now you should get a JSON result containing all the rows from the Customers tabl
     "Id": 2,
     "FirstName": "Ana",
     "LastName": "Trujillo",
-    "City": "M\u00e9xico D.F.",
+    "City": "México D.F.",
     "Country": "Mexico",
     "Phone": "(5) 555-4729",
     "Orders": []
