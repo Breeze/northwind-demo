@@ -77,8 +77,8 @@ When we generate the entities, we will tell the entity generator to use this bas
 
 #### Generate metadata from server
 
-You should already have a `metadata.json` file in the `NorthwindServer` project directory. 
-If you don't, see the "Generate the metadata" topic in the server document.
+You should already have a `metadata.json` file in the [server](../server) directory. 
+If you don't, see the "Generate the metadata" topic in the STEPS document for your server.
 
 #### Generate entities from metadata
 To turn the metadata into entities, we need to write a script.  In the `northwind-react` directory,
@@ -95,7 +95,7 @@ if (!fs.existsSync(dir)){
 }
 
 tsGen.generate({
-  inputFileName: '../NorthwindServer/metadata.json',
+  inputFileName: '../../server/metadata.json',
   outputFolder: dir,
   camelCase: true,
   baseClassName: 'BaseEntity',
@@ -157,7 +157,7 @@ export class EntityManagerProvider {
 
     // configure API endpoint
     const dataService = new DataService({
-      serviceName: "http://localhost:26842/api/breeze",
+      serviceName: "http://localhost:4000/api/breeze",
       hasServerMetadata: false
     });
 
@@ -232,7 +232,7 @@ export class Customers extends React.Component {
 ```
 This is just the beginning of our component.  We'll be adding more to it soon.
 
-## Show the Customer component
+## Show the Customers component
 
 The new component won't display yet because there is no way to get to it.  We will fix that by changing the App component to show it.
 

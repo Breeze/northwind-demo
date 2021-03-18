@@ -1,6 +1,6 @@
 # Steps for creating a Breeze Angular App
 
-Here are some steps to follow to create a new [Angular](https://angular.io) 8 application, using Breeze to handle the data management.
+Here are some steps to follow to create a new [Angular](https://angular.io) application, using Breeze to handle the data management.
 
 We will assume that you've already got the server side created, following the outline described in the [STEPS](../STEPS.md) document.
 
@@ -83,7 +83,7 @@ if (!fs.existsSync(dir)){
 }
 
 tsGen.generate({
-  inputFileName: '../NorthwindServer/metadata.json',
+  inputFileName: '../../server/metadata.json',
   outputFolder: dir,
   camelCase: true,
   baseClassName: 'BaseEntity',
