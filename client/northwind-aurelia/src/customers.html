@@ -1,0 +1,26 @@
+
+<h2>Customers</h2>
+<table>
+  <tr repeat.for="cust of customers" click.delegate="selected = cust"
+    style.bind="{'background-color': selected === cust ? 'lightgray':'white'}">
+    <td>${cust.firstName} ${cust.lastName}</td>
+  </tr>
+</table>    
+
+<button type="button" click.trigger="addCustomer()">Add</button>
+
+<div if.bind="selected && !selected.entityAspect.entityState.isDeleted()">
+  <h3>Edit</h3>
+  <div>First Name: <input type="text" name="firstName" value.bind="selected.firstName"></div>
+  <div>Last Name: <input type="text" name="lastName" value.bind="selected.lastName"></div>
+  <div>City: <input type="text" name="city" value.bind="selected.city"></div>
+  <div>Country: <input type="text" name="country" value.bind="selected.country"></div>
+  <div>Phone: <input type="text" name="phone" value.bind="selected.phone"></div>
+  <button type="button" click.trigger="delete(selected)">Delete</button>
+</div>
+
+<div if.bind="hasChanges">
+  <hr>
+  <button type="button" click.trigger="saveChanges()">Save Changes</button>
+  <button type="button" click.trigger="rejectChanges()">Revert Changes</button>
+</div>
