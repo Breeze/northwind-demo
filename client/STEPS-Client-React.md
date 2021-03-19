@@ -51,7 +51,7 @@ When developing our app, it's helpful to have TypeScript classes to represent th
 In the `northwind-react/src` directory, create a new directory, `model`.  
 
 Then, in `northwind-react/src/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
-```
+```js
 import { Entity, EntityAspect, EntityType } from "breeze-client";
 import { ChangeEvent } from "react";
 
@@ -85,7 +85,7 @@ To turn the metadata into entities, we need to write a script.  In the `northwin
 create a file called `generate-entities.js`.
 
 Fill `generate-entities.js` with the following:
-```
+```js
 const tsGen = require('breeze-entity-generator/tsgen-core');
 const fs = require('fs');
 const dir = './src/model';
@@ -133,7 +133,7 @@ _For simplicity, we'll put this in the `model` folder that we created above.  In
 a separate subdirectory for services._
 
 Create the file `northwind-react/src/model/entity-manager-provider.ts`.  In the file, put:
-```
+```js
 import { DataService, EntityManager, NamingConvention, EntityAction } from "breeze-client";
 import { AjaxFetchAdapter } from "breeze-client/adapter-ajax-fetch";
 import { DataServiceWebApiAdapter } from "breeze-client/adapter-data-service-webapi";
@@ -216,7 +216,7 @@ We will use the EntityManagerProvider in our component.
 Now create a component to display some customer data.  In the `src` directory, create a file called `Customers.tsx`.
 
 Populate the file with the following:
-```
+```js
 import React from 'react';
 
 export class Customers extends React.Component {
@@ -237,7 +237,7 @@ This is just the beginning of our component.  We'll be adding more to it soon.
 The new component won't display yet because there is no way to get to it.  We will fix that by changing the App component to show it.
 
 Edit `App.tsx`.  Remove the existing code, and make it return a `div` displaying our customer component:
-```
+```js
 import React from 'react';
 import './App.css';
 import { Customers } from './Customers';
@@ -272,7 +272,7 @@ Let's use our Customers component to display some customer data using Breeze.
 
 We'll start by defining the interface for the `state` that our component will manipulate.  We'll call the interface `CustState`,
 and give it two properties: a list of customers, and a selected customer:
-```
+```js
 import { Customer } from './model/customer';
 import { entityManagerProvider } from './model/entity-manager-provider';
 import { EntityManager, EntityQuery } from 'breeze-client';
@@ -283,13 +283,13 @@ interface CustState {
 }
 ```
 Change the component declaration to say that it is using `CustState`, and add a field for an `EntityManager` instance:
-```
+```js
 export class Customers extends React.Component<any, CustState> {
 
     manager: EntityManager;
 ```
 Create a constructor for the class, which initializes the state and the manager:
-```
+```js
   constructor(props: any) {
     super(props);
     this.state = {
@@ -306,13 +306,13 @@ When our component is mounted (placed into the component tree), we want to subsc
 This will let our component be updated when data is loaded or changed.
 We will subscribe in the [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount) method.
 
-```
+```js
   componentDidMount() {
     entityManagerProvider.subscribeComponent(this.manager, this);
   }
 ```
 We then need to unsubscribe when the component is unmounted, via the [componentWillUnmount](https://reactjs.org/docs/react-component.html#componentwillunmount) method:
-```
+```js
   componentWillUnmount() {
     entityManagerProvider.unsubscribeComponent(this.manager, this);
   }
@@ -325,7 +325,7 @@ the component's `state` with the new data.  The [executeQuery](http://breeze.git
 method returns a Promise, so we'll update the `state` when the Promise is fullfilled.
 
 Update the [componentDidMount](https://reactjs.org/docs/react-component.html#componentdidmount) method to add the query lines:
-```
+```js
   componentDidMount() {
     entityManagerProvider.subscribeComponent(this.manager, this);
 
@@ -351,7 +351,7 @@ The entityState indicates whether the Customer has been changed since it was que
 will be **Unchanged**, but we will be modifying them later.
 
 Our updated `render` method will look like this:
-```
+```js
   render() {
     return (
       <div>
@@ -375,7 +375,7 @@ Our updated `render` method will look like this:
 #### Try it out
 
 Now your `Customers.tsx` file should look like this:
-```
+```js
 import React from 'react';
 import { EntityManager, EntityQuery } from 'breeze-client';
 import { Customer } from './model/customer';
@@ -466,7 +466,7 @@ Now we'll add editing functions to the CustomerComponent.  The behavior will be:
 In the `Customers.tsx` file, edit the `render` method.  Make two changes to the opening `<tr>` tag:
  - set the **style** of the customer rows so that the background will be a different color for the selected row
  - add an **onClick** handler to set the `selected` property of the state to the current customer 
-```
+```html
   <tr key={cust.id} 
     style={{backgroundColor: (cust === this.state.selected) ? 'lightgray' : 'white'}}
     onClick={() => this.setState({ selected: cust })}>
@@ -477,7 +477,7 @@ to click on a row and see the customer highlighted.
 ### Add Edit Methods
 
 Back in the `Customers.tsx` file, we will add methods to add a customer, delete a customer, save changes, and revert changes.
-```
+```js
   addCustomer() {
     let cust = this.manager.createEntity(Customer.prototype.entityType) as Customer;
     // select the new customer, and add it to the list of customers
@@ -517,7 +517,7 @@ Breeze keeps track of the state of each entity, and syncs up with the server whe
 
 Since these methods use `this` internally, we need to `bind` them to our component so that they have the right `this` when called.
 Add the following lines at the end of the constructor:
-```
+```js
   this.saveChanges = this.saveChanges.bind(this);
   this.rejectChanges = this.rejectChanges.bind(this);
   this.addCustomer = this.addCustomer.bind(this);
@@ -528,7 +528,7 @@ Add the following lines at the end of the constructor:
 
 Now we'll add `<input>` elements for the customer properties.  Our `render()` method is becoming large, so we'll 
 create a separate method, `renderCustEdit()`, to hold the code for editing.
-```
+```js
   renderCustEdit() {
     let cust = this.state.selected;
     if (cust) {
@@ -555,7 +555,7 @@ revert the changes to restore customers to their original state.  We already add
 and `rejectChanges` methods above, so we just need to add buttons to call them.
 
 Put the following lines after the `</table>`:
-```
+```js
   {this.renderCustEdit()}
 
   <div style={{marginTop: '20px'}}>
@@ -586,7 +586,7 @@ changes from **Unchanged** to **Modified**.
 Now we will add a new customer.  We already have the `addCustomer` method in our code, we just need to add the button.
 
 Add the following line, after the customer table in the `render` method:
-```
+```html
 <button type="button" onClick={this.addCustomer}>Add Customer</button>
 ```
 When you click the button, the `addCustomer` method creates a new Customer entity, and adds it to the component's `state.customers` array.
@@ -604,7 +604,7 @@ We already added the `remove` method earlier, so now let's add a button to call 
 customer, so we'll put it in the editing area when a customer is selected.
 
 Add the following line after all the input lines in the `renderCustEdit` method:
-```
+```html
 <button type="button" onClick={this.remove.bind(this, cust)}>Delete</button>
 ```
 When you click the button, the `remove` method changes the selected customer's EntityState, but it doesn't

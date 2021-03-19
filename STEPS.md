@@ -26,7 +26,7 @@ The overall steps for creating our application:
 1. Create the directory structure
 2. Create the database (MS SQL Server or MySQL or Postgres or SQLite; see [dbscripts/README](./dbscripts/README.md))
 3. Create the server ([.NET 5](server/STEPS-Server-NET5.md) or [.NET Core 3](server/STEPS-Server-Core3.md) or [2](server/STEPS-Server-Core2.md) or [NodeJS](server/STEPS-Server-Node.md))
-4. Create the client ([Angular](client/STEPS-Client-Angular.md), [React](client/STEPS-Client-React.md), or [Vue](client/STEPS-Client-Vue.md))
+4. Create the client ([Angular](client/STEPS-Client-Angular.md), [Aurelia](client/STEPS-Client-Aurelia.md), [React](client/STEPS-Client-React.md), or [Vue](client/STEPS-Client-Vue.md))
 
 Let's get started!
 
@@ -63,6 +63,7 @@ See [STEPS-Server-Node](server/STEPS-Server-Node.md) for creating a NodeJS serve
 If you want to jump ahead to look at the client apps, see:
 
 - [STEPS-Client-Angular](client/STEPS-Client-Angular.md) for an Angular app,
+- [STEPS-Client-Aurelia](client/STEPS-Client-Aurelia.md) for an Aurelia app,
 - [STEPS-Client-React](client/STEPS-Client-React.md) for a React app,
 - [STEPS-Client-Vue](client/STEPS-Client-Vue.md) for a Vue app
 

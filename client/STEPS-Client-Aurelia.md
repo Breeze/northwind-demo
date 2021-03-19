@@ -57,7 +57,7 @@ When developing our app, it's helpful to have TypeScript classes to represent th
 In the `northwind-aurelia/src` directory, create a new directory, `model`.  
 
 Then, in `northwind-aurelia/src/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
-```
+```js
 import { Entity, EntityAspect, EntityType } from 'breeze-client';
 
 export class BaseEntity implements Entity {
@@ -77,7 +77,7 @@ To turn the metadata into entities, we need to write a script.  In the `northwin
 create a file called `generate-entities.js`.
 
 Fill `generate-entities.js` with the following:
-```
+```js
 const tsGen = require('breeze-entity-generator/tsgen-core');
 const fs = require('fs');
 const dir = './src/model';
@@ -125,7 +125,7 @@ _For simplicity, we'll put this in the `src` folder.  In a real project, you mig
 a separate subdirectory for services._
 
 Create the file `northwind-aurelia/src/entity-manager-provider.ts`.  In the file, put:
-```
+```js
 import { DI } from "aurelia";
 import { DataService, EntityManager, NamingConvention } from "breeze-client";
 import { AjaxFetchAdapter } from "breeze-client/adapter-ajax-fetch";
@@ -313,7 +313,7 @@ Now we'll add editing functions to the Customers component.  The behavior will b
 ### Change Component Class
 
 We'll start in the `customers.ts` file.  First add a field to keep track of the selected customer:
-```
+```js
   selected: Customer;
 ```
 Then add methods to add a customer, delete a customer, save changes, and revert changes:
@@ -396,7 +396,7 @@ Below the editing section, add a "Save Changes" button that calls the `saveChang
 Add a "Revert Changes" button that calls the `rejectChanges` method in the component class.
 
 Only show the buttons if the are changes to entities in the entity manager's cache.
-```
+```html
 <div if.bind="hasChanges">
   <hr>
   <button type="button" click.trigger="saveChanges()">Save Changes</button>

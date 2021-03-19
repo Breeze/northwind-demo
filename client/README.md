@@ -4,6 +4,8 @@ This folder has the sample client projects that work with any of the [server](..
 
 See [STEPS-Client-Angular](STEPS-Client-Angular.md) for creating an Angular app.
 
+See [STEPS-Client-Aurelia](STEPS-Client-Aurelia.md) for creating an Aurelia app.
+
 See [STEPS-Client-React](STEPS-Client-React.md) for creating a React app.
 
 See [STEPS-Client-Vue](STEPS-Client-Vue.md) for creating a Vue app.

@@ -53,7 +53,7 @@ When developing our app, it's helpful to have TypeScript classes to represent th
 In the `northwind-angular/src/app` directory, create a new directory, `model`.  
 
 Then, in `northwind-angular/src/app/model`, create a new TypeScript file, `base-entity.ts`.  Populate the file with:
-```
+```js
 import { Entity, EntityAspect, EntityType } from 'breeze-client';
 
 export class BaseEntity implements Entity {
@@ -73,7 +73,7 @@ To turn the metadata into entities, we need to write a script.  In the `northwin
 create a file called `generate-entities.js`.
 
 Fill `generate-entities.js` with the following:
-```
+```js
 const tsGen = require('breeze-entity-generator/tsgen-core');
 const fs = require('fs');
 const dir = './src/app/model';
@@ -116,7 +116,7 @@ and by changing the template files.  See `node_modules/breeze-entity-generator/R
 Now we need to register the Breeze adapters to work with Angular.  
 
 Edit `northwind-angular\src\app\app.module.ts`.  At the top of the file, add the following imports:
-```
+```js
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { NamingConvention } from 'breeze-client';
@@ -126,7 +126,7 @@ import { UriBuilderJsonAdapter } from 'breeze-client/adapter-uri-builder-json';
 import { AjaxHttpClientAdapter } from 'breeze-client/adapter-ajax-httpclient';
 ```
 Add `HttpClientModule` and `FormsModule` to the `imports` section of the `@NgModule` declaration:
-```
+```js
   imports: [
     BrowserModule,
     AppRoutingModule,
@@ -136,7 +136,7 @@ Add `HttpClientModule` and `FormsModule` to the `imports` section of the `@NgMod
 ```
 
 In the class declaration at the bottom of the file, add the constructor:
-```
+```js
 export class AppModule {
   constructor(http: HttpClient) {
     // Configure Breeze adapters
@@ -162,10 +162,10 @@ so we'll keep it in the `environment.ts` file.
 
 Edit `src/environments/environment.ts` and add a line for breezeApiRoot.  The port should be the one
 on which your NorthwindServer is listening, and the path is the path to your BreezeController.
-```
+```js
 export const environment = {
   production: false,
-  breezeApiRoot: 'http://localhost:33028/api/breeze'
+  breezeApiRoot: 'http://localhost:4000/api/breeze'
 };
 ```
 
@@ -179,7 +179,7 @@ _In a real project, now would be a good time to start creating submodules.  For 
 module for simplicity._
 
 Create the file `northwind-angular/src/app/entity-manager-provider.ts`.  In the file, put:
-```
+```js
 import { Injectable } from '@angular/core';
 import { DataService, EntityManager } from 'breeze-client';
 import { environment } from '../environments/environment';
@@ -230,12 +230,12 @@ customer.component.ts
 The new component won't display yet because there is no way to get to it.  We will fix that by changing the app module to route to it.
 
 First, edit `app.component.html` and delete **everything except** the `router-outlet` tag.  Then add a heading:
-```
+```html
 <h1>Northwind</h1>
 <router-outlet></router-outlet>
 ```
 Then edit `app-routing.module.ts` and add some routes:
-```
+```js
 const routes: Routes = [
   {
     path: 'customers',
@@ -265,13 +265,13 @@ refer back to the [STEPS](../STEPS.md) document.
 ### Get Customer data
 
 Edit `customer.component.ts`.  In the body of the `CustomerComponent` class, add fields for EntityManager and a list of Customers, and change the constructor so it accepts an EntityManagerProvider and stores it in a private field:
-```
+```js
   manager: EntityManager;
   customers: Customer[];
   constructor(private entityManagerProvider: EntityManagerProvider) { }
 ```
 Then edit the `ngOnInit` method to create an EntityManager and perform a Breeze query:
-```
+```js
   ngOnInit() {
     this.manager = this.entityManagerProvider.newManager();
     const query = new EntityQuery('Customers').where('lastName', 'startsWith', 'C');
@@ -287,7 +287,7 @@ The query results are assigned to the `customers` field in the component.
 ### Show the data
 
 Edit the HTML template, `customer.component.html`.  Add a `ngFor` loop to display some properties of the customers:
-```
+```html
 <p>customer works!</p>
 
 <table>
@@ -325,11 +325,11 @@ Now we'll add editing functions to the CustomerComponent.  The behavior will be:
 ### Change Component Class
 
 We'll start in the `customer.component.ts` file.  First add a field to keep track of the selected customer:
-```
+```js
   selected: Customer;
 ```
 Then add methods to add a customer, delete a customer, save changes, and revert changes:
-```
+```js
   addCustomer() {
     this.selected = this.manager.createEntity(Customer.prototype.entityType) as Customer;
     this.customers.push(this.selected);
@@ -361,7 +361,7 @@ Edit `customer.component.html` and change the `table`.
 Add a click event that sets the selected customer, and a `ngStyle` directive that highlights the selected line.  
 
 Add another table column that shows the state of each customer entity.
-```
+```html
 <table>
   <tr *ngFor="let cust of customers" (click)="selected = cust"
     [ngStyle]="{'background-color': selected === cust ? 'lightgray':'white'}">
@@ -375,7 +375,7 @@ Try it, and make sure the rows highlight when you click on them.
 ### Add a customer
 
 Below the table, create an "Add" button that calls the `addCustomer` method in the component class.
-```
+```html
 <button type="button" (click)="addCustomer()">Add</button>
 ```
 
@@ -386,7 +386,7 @@ Below the "Add" button, create a set of inputs for editing the properties of the
 Use an `*ngIf` to only show this section if a customer is selected and the customer is not marked for deletion.
 
 Also create a "Delete" button that calls the `delete` method in the component class.
-```
+```html
 <div *ngIf="selected && !selected.entityAspect.entityState.isDeleted()">
   <h3>Edit</h3>
   <div>First Name: <input type="text" name="firstName" [(ngModel)]="selected.firstName"></div>
@@ -405,7 +405,7 @@ Below the editing section, add a "Save Changes" button that calls the `saveChang
 Add a "Revert Changes" button that calls the `rejectChanges` method in the component class.
 
 Only show the buttons if the are changes to entities in the entity manager's cache.
-```
+```html
 <div *ngIf="manager.hasChanges()">
   <hr>
   <button type="button" (click)="saveChanges()">Save Changes</button>

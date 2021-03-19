@@ -299,7 +299,7 @@ and run the server:
 You should see some messages from Breeze about loading the entity types, and then the message "Listening on port 4000".
 
 Now open a browser and go to [http://localhost:4000/api/breeze/Customer?{"where":{"Country":"Germany"}}](http://localhost:4000/api/breeze/Customer?{%22where%22:{%22Country%22:%22Germany%22}}).  You should see data returned from the database:
-```
+```json
 [
   {
     "Id": 1,

@@ -4,6 +4,7 @@ Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on h
 
 **Client** is one of 
   - Angular
+  - Aurelia
   - React
   - Vue
 

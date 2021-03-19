@@ -82,16 +82,16 @@ The PersistenceManager is a Breeze class that wraps the DbContext to provide Bre
 1. Right-click on the **NorthwindServer** project and select Add / Class...
 2. Name the class `NorthwindPersistenceManager.cs` and click Add.  This will create the class file.
 3. In the class file, remove the default `using` statements and replace them with 
-```
+```csharp
 using Breeze.Persistence.EFCore;
 using NorthwindModel.Models;
 ```
 4. Make the class extend EFPersistenceManager
-```
+```csharp
 public class NorthwindPersistenceManager : EFPersistenceManager<NorthwindContext>
 ```
 5. Add a constructor to create it from our DbContext
-```
+```csharp
 public NorthwindPersistenceManager(NorthwindContext dbContext) : base(dbContext) {}
 ```
 
@@ -106,7 +106,7 @@ We will add a controller class that will be the interface between the client and
 5. Delete all the existing methods in the BreezeController class
 6. Update the class attributes so it can perform Breeze queries:
 
-```
+```csharp
 using Breeze.AspNetCore;
 using Breeze.Persistence;
 using Microsoft.AspNetCore.Mvc;
@@ -122,7 +122,7 @@ using System.Linq;
 ### Add the Persistence Manager to the BreezeController
 
 Add a new `persistenceManager` field to the `BreezeController` class, and add a constructor that takes a NorthwindContext and sets the `persistenceManager` field.  This will be called by dependency injection.
-```
+```csharp
   private NorthwindPersistenceManager persistenceManager;
   public BreezeController(NorthwindContext dbContext)
   {
@@ -133,7 +133,7 @@ Add a new `persistenceManager` field to the `BreezeController` class, and add a 
 ### Add query methods to the BreezeController
 
 Add a HttpGet method returning `IQueryable<>` for each of the `Customer`, `Order`, `Product`, and `Supplier` types in the data model.  We won't do one for `OrderItem` because we will only query those with and `Order`
-```
+```csharp
   [HttpGet]
   public IQueryable<Customer> Customers()
   {
@@ -158,7 +158,7 @@ Add a HttpGet method returning `IQueryable<>` for each of the `Customer`, `Order
 ### Add a SaveChanges method to the BreezeController
 
 This HttpPost method will be called by the client to create/update/delete entities.
-```
+```csharp
   [HttpPost]
   public ActionResult<SaveResult> SaveChanges([FromBody] JObject saveBundle)
   {
@@ -172,7 +172,7 @@ Now make sure the solution compiles.  Don't run it yet, there are a few more thi
 ## Add connection string
 
 Add the connection string to the `appsettings.json` file
-```
+```json
   "ConnectionStrings": {
     "Northwind": "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True"
   },
@@ -181,7 +181,7 @@ Add the connection string to the `appsettings.json` file
 ## Set the port number
 
 Change the default port numbers to **4000** in all the `applicationUrl` settings inside `Properties/launchSettings.json`.
-```
+```json
     "applicationUrl": "http://localhost:4000",
 ```
 
@@ -192,7 +192,7 @@ Edit the Startup.cs file in the **NorthwindServer** project.
 
 First we add the needed `using` statements:
 
-```
+```csharp
 using Breeze.AspNetCore;
 using Breeze.Core;
 using Microsoft.AspNetCore.Builder;
@@ -205,7 +205,7 @@ using NorthwindModel.Models;
 ```
 
 We will need access to the `appsettings.json` configuration, so we will need to add a constructor to accept an IConfiguration instance:
-```
+```csharp
         private IConfiguration configuration;
         public Startup(IConfiguration configuration)
         {
@@ -220,7 +220,7 @@ In the `ConfigureServices` method, we need to
 4. Add the DbContext to dependency injection, so our BreezeController can receive it
 
 add some MVC options to let the Breeze client communicate with the server:
-```
+```csharp
 public void ConfigureServices(IServiceCollection services)
 {
     var mvcBuilder = services.AddMvc();
@@ -242,7 +242,7 @@ public void ConfigureServices(IServiceCollection services)
 }
 ```
 In the `Configure` method, remove the existing `app.Run()` statement.  Then configure CORS and turn on MVC:
-```
+```csharp
 public void Configure(IApplicationBuilder app, IHostingEnvironment env)
 {
     if (env.IsDevelopment())
@@ -269,7 +269,7 @@ Later we will use the metadata to generate TypeScript classes representing our e
 
 When we run our .NET Core application from the command line, it starts in the `Main` method of `Program.cs`.
 So we will change the `Main` method to produce metadata output, instead of starting the server, when we give it a "metadata" command-line parameter:
-```
+```csharp
 public static void Main(string[] args)
 {
     if (args.Length > 0 && args[0].Contains("metadata"))
@@ -297,7 +297,7 @@ _NOTE: Switch separators to `/` for OSX or Linux._
 
 That will create a `metadata.json` file in the parent `server` directory.  The file
 contains a big blob of JSON that represents the type information that EF knows about our data model.:
-```
+```json
 {"structuralTypes":[{"shortName":"Customer","namespace":"NorthwindModel.Models","autoGeneratedKeyType":"Identity","defaultResourceName":"Customer",...
 ```
 
@@ -311,7 +311,7 @@ but it may return a 404 error because we haven't enabled static pages.  That's o
 Change the URL to http://localhost:4000/api/breeze/customers
 
 Now you should get a JSON result containing all the rows from the Customers table in the Northwind database:
-```
+```json
 [
   {
     "$id": "1",
