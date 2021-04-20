@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Breeze.AspNetCore.NetCore" Version="3.0.1" />
-    <PackageReference Include="Breeze.Persistence.EFCore" Version="3.0.1" />
+    <PackageReference Include="Breeze.AspNetCore.NetCore" Version="3.1.4" />
+    <PackageReference Include="Breeze.Persistence.EFCore" Version="3.1.4" />
     <PackageReference Include="Bricelam.EntityFrameworkCore.Pluralizer" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
