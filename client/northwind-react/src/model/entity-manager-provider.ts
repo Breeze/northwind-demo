@@ -15,7 +15,13 @@ export class EntityManagerProvider {
     // configure breeze adapters
     ModelLibraryBackingStoreAdapter.register();
     UriBuilderJsonAdapter.register();
-    AjaxFetchAdapter.register();
+    
+    // example of adding headers to requests via requestInterceptor
+    AjaxFetchAdapter.register().requestInterceptor = (req => {
+        console.log(req);
+        req.config.headers.Authorization = "Bearer oiwjeglkwjelkj";
+      }) as any;
+
     DataServiceWebApiAdapter.register();
     NamingConvention.camelCase.setAsDefault();
 
