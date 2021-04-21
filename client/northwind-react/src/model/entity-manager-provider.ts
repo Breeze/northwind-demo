@@ -17,10 +17,14 @@ export class EntityManagerProvider {
     UriBuilderJsonAdapter.register();
     
     // example of adding headers to requests via requestInterceptor
-    AjaxFetchAdapter.register().requestInterceptor = (req => {
-        console.log(req);
-        req.config.headers.Authorization = "Bearer oiwjeglkwjelkj";
-      }) as any;
+    // AjaxFetchAdapter.register().requestInterceptor = (req => {
+    //     console.log(req);
+    //     req.config.headers.Authorization = "Bearer oiwjeglkwjelkj";
+    //   }) as any;
+
+    // example of adding headers to requests via defaultSettings
+    AjaxFetchAdapter.register().defaultSettings = { headers: { "Authorization": "Bearer oiwjeglkwjelkj"}};
+
 
     DataServiceWebApiAdapter.register();
     NamingConvention.camelCase.setAsDefault();
