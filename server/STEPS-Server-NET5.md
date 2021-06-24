@@ -76,7 +76,7 @@ We will create the data model classes from the database schema.  For this, we ne
 
 1. Select Tools / Nuget Package Manager / Package Manager Console
 2. Set Default project to **NorthwindModel**
-3. `Scaffold-DbContext "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -Force`
+3. `Scaffold-DbContext "Data Source=.;Initial Catalog=Northwind;Integrated Security=True;MultipleActiveResultSets=True" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -Force -NoOnConfiguring`
     - (The command above should all be on one line)
 
 Now you should have a **Models** folder in the **NorthwindModel** project, which contains classes for each of the Northwind database tables, and a `NorthwindContext.cs` that contains the EF DbContext class for accessing the database.
