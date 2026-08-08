@@ -1,6 +1,10 @@
-# Steps for creating a Breeze Angular App
+# Steps for creating a Breeze Angular 8 App
 
 Here are some steps to follow to create a new [Angular](https://angular.io) application, using Breeze to handle the data management.
+
+> This document covers **Angular 8**, and the app it builds is in the [northwind-angular8](northwind-angular8)
+> directory.  For a current version of Angular, see
+> [STEPS-Client-Angular22](STEPS-Client-Angular22.md).
 
 We will assume that you've already got the server side created, following the outline described in the [STEPS](../STEPS.md) document.
 

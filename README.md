@@ -3,7 +3,8 @@
 Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on how to build it from scratch.
 
 **Client** is one of 
-  - Angular
+  - Angular 22
+  - Angular 8
   - Aurelia
   - React
   - Vue
