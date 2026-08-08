@@ -9,6 +9,7 @@ Breeze end-to-end demo with client and server, and [instructions](STEPS.md) on h
   - Vue
 
 **Server** is one of
+  - .NET 10 with EFCore 10
   - .NET 5 with EFCore 5
   - .NET Core 3.1 with EFCore 3
   - .NET Core 2.2 with EFCore 2

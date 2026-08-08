@@ -2,6 +2,8 @@
 
 This folder has the sample server projects that work with any of the [client](../client) samples.
 
+See [STEPS-Server-NET10](STEPS-Server-NET10.md) for creating a .NET 10 server.
+
 See [STEPS-Server-NET5](STEPS-Server-NET5.md) for creating a .NET 5 server.
 
 See [STEPS-Server-Core3](STEPS-Server-Core3.md) for creating a .NET Core 3 server.

@@ -25,7 +25,7 @@ The overall steps for creating our application:
 
 1. Create the directory structure
 2. Create the database (MS SQL Server or MySQL or Postgres or SQLite; see [dbscripts/README](./dbscripts/README.md))
-3. Create the server ([.NET 5](server/STEPS-Server-NET5.md) or [.NET Core 3](server/STEPS-Server-Core3.md) or [2](server/STEPS-Server-Core2.md) or [NodeJS](server/STEPS-Server-Node.md))
+3. Create the server ([.NET 10](server/STEPS-Server-NET10.md) or [.NET 5](server/STEPS-Server-NET5.md) or [.NET Core 3](server/STEPS-Server-Core3.md) or [2](server/STEPS-Server-Core2.md) or [NodeJS](server/STEPS-Server-Node.md))
 4. Create the client ([Angular](client/STEPS-Client-Angular.md), [Aurelia](client/STEPS-Client-Aurelia.md), [React](client/STEPS-Client-React.md), or [Vue](client/STEPS-Client-Vue.md))
 
 Let's get started!
@@ -51,6 +51,8 @@ Then come back here for the next steps.
 ## Next Steps
 
 Next we'll work on the API server.  
+
+See [STEPS-Server-NET10](server/STEPS-Server-NET10.md) for creating a .NET 10 server.
 
 See [STEPS-Server-NET5](server/STEPS-Server-NET5.md) for creating a .NET 5 server.
 
