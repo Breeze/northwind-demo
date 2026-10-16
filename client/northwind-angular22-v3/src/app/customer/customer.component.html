@@ -1,0 +1,34 @@
+<p>customer works!</p>
+
+<table>
+  @for (cust of customers(); track cust) {
+    <tr (click)="selected.set(cust)"
+      [style.background-color]="selected() === cust ? 'lightgray' : 'white'">
+      <td>{{cust.firstName}} {{cust.lastName}}</td>
+      <td>{{cust.entityAspect.entityState}}</td>
+    </tr>
+  }
+</table>
+<button type="button" (click)="addCustomer()">Add</button>
+
+@if (selected(); as cust) {
+  @if (!cust.entityAspect.entityState.isDeleted()) {
+    <div>
+      <h3>Edit</h3>
+      <div>First Name: <input type="text" name="firstName" [(ngModel)]="cust.firstName"></div>
+      <div>Last Name: <input type="text" name="lastName" [(ngModel)]="cust.lastName"></div>
+      <div>City: <input type="text" name="city" [(ngModel)]="cust.city"></div>
+      <div>Country: <input type="text" name="country" [(ngModel)]="cust.country"></div>
+      <div>Phone: <input type="text" name="phone" [(ngModel)]="cust.phone"></div>
+      <button type="button" (click)="delete(cust)">Delete</button>
+    </div>
+  }
+}
+
+@if (manager.hasChanges()) {
+  <div>
+    <hr>
+    <button type="button" (click)="saveChanges()">Save Changes</button>
+    <button type="button" (click)="rejectChanges()">Revert Changes</button>
+  </div>
+}
