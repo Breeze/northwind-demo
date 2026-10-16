@@ -13,12 +13,13 @@ Along the way we will:
 - Create an Angular application using the CLI
 - Create TypeScript entity classes from the server metadata
 - Create an Angular component to read and update entities
+- Give the component a polished UI with the [Optimus UI](https://optimus.openng.org) component library
 
 > This is the Breeze 3 version of [STEPS-Client-Angular22](STEPS-Client-Angular22.md), which uses
 > `breeze-client` 2.x and lives in the [northwind-angular22](northwind-angular22) directory.  The finished
-> Breeze 3 app is in [northwind-angular22-v3](northwind-angular22-v3).  The Angular parts are the same; the
-> Breeze setup is simpler.  A summary of what changed is at the
-> [end of this document](#whats-different-from-the-breeze-2-version).
+> Breeze 3 app is in [northwind-angular22-v3](northwind-angular22-v3).  The Angular parts are the same up to
+> the Optimus UI section, which is new in this version; the Breeze setup is simpler.  A summary of what
+> changed is at the [end of this document](#whats-different-from-the-breeze-2-version).
 
 # Create the Angular App
 
@@ -593,9 +594,329 @@ the changes in a batch.  (Remember that we only query customers where lastName s
 If you open your browser's developer tools (F12), you can see the network traffic between the Breeze client and the server API
 as queries and saves are sent.
 
+## Improve the UI with Optimus UI
+
+The app works, but it doesn't look like much.  Now we'll replace the plain HTML with components from
+[Optimus UI](https://optimus.openng.org), an open source (MIT) library of Angular UI components.  When we're
+done, the screen will have two panels side by side:
+
+ - A **Customers** panel holding a table of customers, with a coloured tag showing each customer's entity state,
+   and Add, Save Changes and Revert Changes buttons in its footer
+ - An **Edit Customer** panel holding the editing form, with a Delete button in its footer
+
+None of the Breeze code changes.  The component class gets two small helper methods, and the template is
+rewritten to use Optimus UI components.
+
+_Optimus UI documentation, including an LLM-friendly version at
+[optimus.openng.org/llms/llms.txt](https://optimus.openng.org/llms/llms.txt), is at
+[optimus.openng.org](https://optimus.openng.org)._
+
+### Install Optimus UI
+
+In the `northwind-angular22-v3` directory, run:
+
+`npm install @openng/optimus-ui @openng/optimus-ui-themes @openng/icons @angular/cdk`
+
+ - `@openng/optimus-ui` is the component library.  Version 2.x targets Angular 22
+ - `@openng/optimus-ui-themes` holds the pre-built themes
+ - `@openng/icons` is the icon font that the components and the examples use (the `pi pi-*` classes)
+ - `@angular/cdk` is a peer dependency of Optimus UI.  It isn't installed with a new Angular app, so we add it
+
+_The CLI can do this step and the next for you with `ng add @openng/optimus-ui`, which asks which theme to use.
+We do it by hand here so you can see what changes._
+
+### Configure Optimus UI
+
+Optimus UI is configured with a provider.  Edit `app.config.ts` and add two imports:
+```ts
+import { provideOptimus } from '@openng/optimus-ui/config';
+import Aura from '@openng/optimus-ui-themes/aura';
+```
+Then add `provideOptimus` to the `providers` array, after `provideHttpClient()`:
+```ts
+    provideOptimus({ theme: { preset: Aura } }),
+```
+This selects the Aura theme.  The other themes are `lara`, `material` and `nora`.
+
+The theme follows the system's light/dark setting by default.  It does that by setting CSS variables (named
+`--p-*`) that the components use, and we can use them too.
+
+Next, add the icon stylesheet to the build.  In `angular.json`, find the `styles` array in the `build` options and
+put the icon CSS ahead of the app's own stylesheet:
+```json
+            "styles": ["@openng/icons/openng-icons.css", "src/styles.css"]
+```
+
+Finally, give the page itself a background and text colour that match the theme, in both light and dark mode.
+Replace the contents of `src/styles.css` with:
+```css
+/* Optimus UI follows the system light/dark setting, so let the page do the same. */
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--p-text-color);
+  background: light-dark(var(--p-surface-100), var(--p-surface-950));
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-weight: 600;
+}
+```
+`light-dark()` picks the first colour in light mode and the second in dark mode.  It works because `:root`
+declares that the page supports both colour schemes.
+
+### Raise the bundle budget
+
+Optimus UI's Table is a large component, and with it the initial bundle grows to about 1.25 MB (250 kB
+compressed).  That is over the 1 MB limit the CLI sets on a new app, so `ng build` would fail.  For this demo we
+simply raise the limit.  In `angular.json`, find the `budgets` in the `production` configuration and change the
+`initial` budget:
+```json
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "2MB"
+                },
+```
+
+### Import the components
+
+Each Optimus UI component is imported on its own, so you only include what you use.  Edit
+`customer.component.ts` and add these imports:
+```ts
+import { ButtonModule } from '@openng/optimus-ui/button';
+import { IftaLabelModule } from '@openng/optimus-ui/iftalabel';
+import { InputTextModule } from '@openng/optimus-ui/inputtext';
+import { PanelModule } from '@openng/optimus-ui/panel';
+import { TableModule } from '@openng/optimus-ui/table';
+import { TagModule } from '@openng/optimus-ui/tag';
+```
+Then add them to the component's `imports` array, next to `FormsModule`:
+```ts
+@Component({
+  selector: 'app-customer',
+  imports: [FormsModule, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  templateUrl: './customer.component.html',
+  styleUrl: './customer.component.css',
+})
+```
+
+Also add two helper methods to the class, after `rejectChanges`:
+```ts
+  canDelete() {
+    const cust = this.selected();
+    return !!cust && !cust.entityAspect.entityState.isDeleted();
+  }
+
+  // Color for the entity state tag in the customer list
+  stateSeverity(cust: Customer) {
+    const state = cust.entityAspect.entityState;
+    if (state.isAdded()) return 'success';
+    if (state.isModified()) return 'warn';
+    if (state.isDeleted()) return 'danger';
+    return 'secondary';
+  }
+```
+`canDelete` enables the Delete button.  `stateSeverity` picks the colour of the tag that shows each
+customer's entity state: green for Added, amber for Modified, red for Deleted, and grey for Unchanged.
+
+### Rewrite the template
+
+Replace the whole of `customer.component.html` with the version below.  We'll go through it piece by piece
+afterwards.
+```html
+<div class="layout">
+  <p-panel header="Customers">
+    <p-table [value]="customers()" dataKey="id" selectionMode="single"
+      [selection]="selected()" (selectionChange)="selected.set($event ?? undefined)"
+      size="small" [rowHover]="true">
+      <ng-template #header>
+        <tr>
+          <th>Name</th>
+          <th>City</th>
+          <th>Country</th>
+          <th>State</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-cust>
+        <tr [pSelectableRow]="cust">
+          <td>{{cust.firstName}} {{cust.lastName}}</td>
+          <td>{{cust.city}}</td>
+          <td>{{cust.country}}</td>
+          <td>
+            <p-tag [value]="cust.entityAspect.entityState.name" [severity]="stateSeverity(cust)" />
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="4">No customers found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <ng-template #footer>
+      <div class="actions">
+        <p-button label="Add" icon="pi pi-plus" severity="secondary" (onClick)="addCustomer()" />
+        <span class="spacer"></span>
+        @if (manager.hasChanges()) {
+          <p-button label="Revert Changes" icon="pi pi-undo" severity="secondary" [outlined]="true" (onClick)="rejectChanges()" />
+          <p-button label="Save Changes" icon="pi pi-save" (onClick)="saveChanges()" />
+        }
+      </div>
+    </ng-template>
+  </p-panel>
+
+  <p-panel header="Edit Customer">
+    @if (selected(); as cust) {
+      @if (!cust.entityAspect.entityState.isDeleted()) {
+        <div class="form">
+          <p-iftalabel>
+            <input pInputText id="firstName" name="firstName" [(ngModel)]="cust.firstName" autocomplete="off" fluid />
+            <label for="firstName">First Name</label>
+          </p-iftalabel>
+          <p-iftalabel>
+            <input pInputText id="lastName" name="lastName" [(ngModel)]="cust.lastName" autocomplete="off" fluid />
+            <label for="lastName">Last Name</label>
+          </p-iftalabel>
+          <p-iftalabel>
+            <input pInputText id="city" name="city" [(ngModel)]="cust.city" autocomplete="off" fluid />
+            <label for="city">City</label>
+          </p-iftalabel>
+          <p-iftalabel>
+            <input pInputText id="country" name="country" [(ngModel)]="cust.country" autocomplete="off" fluid />
+            <label for="country">Country</label>
+          </p-iftalabel>
+          <p-iftalabel>
+            <input pInputText id="phone" name="phone" [(ngModel)]="cust.phone" autocomplete="off" fluid />
+            <label for="phone">Phone</label>
+          </p-iftalabel>
+        </div>
+      } @else {
+        <p class="hint">This customer will be deleted when you save changes.</p>
+      }
+    } @else {
+      <p class="hint">Select a customer to edit.</p>
+    }
+
+    <ng-template #footer>
+      <div class="actions">
+        <p-button label="Delete" icon="pi pi-trash" severity="danger" [outlined]="true"
+          [disabled]="!canDelete()" (onClick)="delete(selected()!)" />
+      </div>
+    </ng-template>
+  </p-panel>
+</div>
+```
+We've also dropped the "customer works!" line.
+
+#### The panels
+
+`<p-panel>` is a container with a header.  The `header` attribute sets its title, and an
+`<ng-template #footer>` inside it fills its footer, which is where we put the buttons.
+
+#### The table
+
+`<p-table>` replaces our `@for` loop.  It takes the list in `[value]`, and renders it with two templates:
+`#header` for the column headings, and `#body` for one row, which receives each customer as `let-cust`.  The
+`#emptymessage` template is shown when the list is empty.
+
+Selection is now handled by the table instead of our own `(click)` handler and background-colour binding:
+
+ - `selectionMode="single"` turns on row selection, and `[pSelectableRow]="cust"` makes each row selectable.
+   The table highlights the selected row itself
+ - `[selection]` and `(selectionChange)` connect the table's selection to our `selected` signal.  We don't use
+   the `[(selection)]` two-way shorthand because `selected` is a signal: the table reads it with `selected()` and
+   writes it with `selected.set(...)`.  The table emits `null` when nothing is selected, so `?? undefined` keeps
+   the signal's type as `Customer | undefined`
+ - `dataKey="id"` tells the table to compare rows by their `id` key.  This matters with Breeze entities: without
+   a `dataKey` the table compares rows by deep equality, which is slow and would walk into each entity's
+   navigation properties and `entityAspect`
+
+`size="small"` makes the rows more compact, and `[rowHover]="true"` highlights the row under the mouse.
+
+The entity state column now uses `<p-tag>`, a small coloured label, with the colour from `stateSeverity`.
+
+#### The form
+
+Each input is now an `<input pInputText>`, which styles a native input to match the theme.  Since it is still a
+plain `<input>`, `[(ngModel)]` binds it to the entity property exactly as before.  The `fluid` attribute makes
+it fill the width of the panel.
+
+Each input is wrapped in `<p-iftalabel>` ("in-field top-aligned label") with a `<label>` after it.  That puts the
+label inside the input box, above the value.  The `for` on the label must match the `id` on the input.
+
+When no customer is selected, or the selected customer has been deleted, the panel shows a hint instead of the
+form.
+
+#### The buttons
+
+`<p-button>` uses `label` for its text, `icon` for an icon from `@openng/icons`, and `severity` for its
+colour.  `[outlined]="true"` gives a lighter, outlined style for the less important actions.
+
+Notice that the click event is **`(onClick)`**, not `(click)`.  `(onClick)` is the event the Button
+component emits, and it isn't emitted when the button is disabled.
+
+### Lay out the panels
+
+Last, add some styles to put the panels side by side and space out their contents.  Replace the contents of
+`customer.component.css` with:
+```css
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.hint {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+```
+The customer list gets two thirds of the width and the edit panel one third; on a narrow screen the panels stack.
+The `.spacer` pushes Save and Revert to the right-hand end of the Customers footer, away from Add.
+
+_The Optimus UI examples use [Tailwind CSS](https://optimus.openng.org/tailwind) utility classes such as
+`flex` and `gap-2` for layout.  This app doesn't use Tailwind, so we write the few styles we need ourselves._
+
+### Try it out
+
+Run `ng serve --open` again, with the server running.  You should see the Customers and Edit Customer panels.
+Everything works as before: click a row to select a customer, edit it in the form, and watch its state tag
+change from Unchanged to Modified.  Add, delete, save and revert all work the same way.
+
 ## A note on unit tests
 
-`ng test` runs [Vitest](https://vitest.dev) against a jsdom browser.  Three things are worth knowing if you
+`ng test` runs [Vitest](https://vitest.dev) against a jsdom browser.  Four things are worth knowing if you
 write component tests against Breeze:
 
 - **The app initializer does not run in a component test**, so configure Breeze yourself in `beforeEach`, after
@@ -616,6 +937,9 @@ write component tests against Breeze:
   about its own scheduler, so after flushing a mocked response you need to yield to the task queue
   (`await new Promise(resolve => setTimeout(resolve, 0))`) and then call `fixture.detectChanges()` before
   asserting against the DOM.  This applies only to tests; the running application repaints on its own.
+- **`<p-table>` renders its header row inside the same `<table>` as the data rows.**  To find the customer
+  rows in a test, query `table tbody tr` rather than `table tr`.  Clicking one of those rows selects it through
+  the table, just as it does in the browser, so a test can select a customer and then edit the form.
 
 ## What's different from the Breeze 2 version
 
@@ -634,8 +958,9 @@ write component tests against Breeze:
 | Angular HTTP integration | `breeze-client/adapter-ajax-httpclient` | `breeze-client/adapter-angular-httpclient` |
 | Default naming convention | `none` | `camelCase` |
 
-The Angular parts of the app - routing, environments, the component, its template, and the query/save calls -
-are unchanged.  For every change between Breeze 2 and Breeze 3, see the
+The Angular parts of the app - routing, environments, the component, and the query/save calls - are
+unchanged.  The one Angular addition is the Optimus UI interface, which is new in this version and has nothing
+to do with the Breeze upgrade: the Breeze 2 app still uses the plain HTML template.  For every change between Breeze 2 and Breeze 3, see the
 [upgrade guide](https://github.com/Breeze/breeze-client-v3/blob/main/UPGRADE.md).
 
 ## Conclusion
@@ -645,8 +970,8 @@ We have come to the end of our journey.
 We've created an Angular + Breeze application from the ground up,
 using tools to create a simple entity model from the database for both the client and server parts of the application.
 
-We now have an application that can create, read, update, and delete data.  It's ready for an improved UI,
-and it's ready to be extended to cover more entity types and more complex use cases.
+We now have an application that can create, read, update, and delete data, with a UI built from Optimus UI
+components.  It's ready to be extended to cover more entity types and more complex use cases.
 <hr>
 If you have problems with this demo, please create issues in this github repo.
 

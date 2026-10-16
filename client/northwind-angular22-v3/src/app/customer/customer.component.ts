@@ -1,12 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from '@openng/optimus-ui/button';
+import { IftaLabelModule } from '@openng/optimus-ui/iftalabel';
+import { InputTextModule } from '@openng/optimus-ui/inputtext';
+import { PanelModule } from '@openng/optimus-ui/panel';
+import { TableModule } from '@openng/optimus-ui/table';
+import { TagModule } from '@openng/optimus-ui/tag';
 import { EntityQuery } from 'breeze-client';
 import { Customer } from '../model/customer';
 import { EntityManagerProvider } from '../entity-manager-provider';
 
 @Component({
   selector: 'app-customer',
-  imports: [FormsModule],
+  imports: [FormsModule, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
   templateUrl: './customer.component.html',
   styleUrl: './customer.component.css',
 })
@@ -45,6 +51,20 @@ export class CustomerComponent implements OnInit {
   rejectChanges() {
     this.manager.rejectChanges();
     this.customers.set(this.manager.getEntities('Customer') as Customer[]);
+  }
+
+  canDelete() {
+    const cust = this.selected();
+    return !!cust && !cust.entityAspect.entityState.isDeleted();
+  }
+
+  // Color for the entity state tag in the customer list
+  stateSeverity(cust: Customer) {
+    const state = cust.entityAspect.entityState;
+    if (state.isAdded()) return 'success';
+    if (state.isModified()) return 'warn';
+    if (state.isDeleted()) return 'danger';
+    return 'secondary';
   }
 
 }

@@ -75,14 +75,14 @@ describe('CustomerComponent', () => {
   });
 
   it('should render a row per customer', () => {
-    const rows = fixture.nativeElement.querySelectorAll('table tr') as NodeListOf<HTMLElement>;
+    const rows = fixture.nativeElement.querySelectorAll('table tbody tr') as NodeListOf<HTMLElement>;
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Maria Cartman');
     expect(rows[0].textContent).toContain('Unchanged');
   });
 
   it('should edit the selected customer through the form', async () => {
-    const row = fixture.nativeElement.querySelector('table tr') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('table tbody tr') as HTMLElement;
     row.click();
     fixture.detectChanges();
 
@@ -110,7 +110,7 @@ describe('CustomerComponent', () => {
     expect(component.customers().length).toBe(2);
     expect(component.selected()).toBe(component.customers()[1]);
     expect(component.manager.hasChanges()).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('table tr').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('table tbody tr').length).toBe(2);
   });
 
   it('should mark a customer deleted', () => {

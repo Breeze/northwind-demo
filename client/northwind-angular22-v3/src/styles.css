@@ -1,1 +1,19 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Optimus UI follows the system light/dark setting, so let the page do the same. */
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--p-text-color);
+  background: light-dark(var(--p-surface-100), var(--p-surface-950));
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-weight: 600;
+}
