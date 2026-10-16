@@ -2,11 +2,8 @@ import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { NamingConvention } from 'breeze-client';
-import { AjaxHttpClientAdapter } from 'breeze-client/adapter-ajax-httpclient';
-import { DataServiceWebApiAdapter } from 'breeze-client/adapter-data-service-webapi';
-import { ModelLibraryBackingStoreAdapter } from 'breeze-client/adapter-model-library-backing-store';
-import { UriBuilderJsonAdapter } from 'breeze-client/adapter-uri-builder-json';
+import { configureBreeze } from 'breeze-client';
+import { httpClientFetch } from 'breeze-client/adapter-angular-httpclient';
 
 import { EntityManagerProvider } from '../entity-manager-provider';
 import { CustomerComponent } from './customer.component';
@@ -38,11 +35,7 @@ describe('CustomerComponent', () => {
     // The Breeze adapters are normally registered by the app initializer in
     // app.config.ts, which does not run in a component test.  Registering the
     // ajax adapter points Breeze at this test's HttpTestingController backend.
-    AjaxHttpClientAdapter.register(TestBed.inject(HttpClient));
-    ModelLibraryBackingStoreAdapter.register();
-    UriBuilderJsonAdapter.register();
-    DataServiceWebApiAdapter.register();
-    NamingConvention.camelCase.setAsDefault();
+    configureBreeze({ fetch: httpClientFetch(TestBed.inject(HttpClient)) })
 
     httpMock = TestBed.inject(HttpTestingController);
 

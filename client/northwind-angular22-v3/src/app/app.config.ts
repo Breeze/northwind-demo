@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { httpClientFetch } from 'breeze-client/adapter-angular-httpclient';
-import { configureBreeze, BreezeFetch } from 'breeze-client';
+import { configureBreeze } from 'breeze-client';
 
 import { routes } from './app.routes';
 

@@ -1,0 +1,655 @@
+# Steps for creating a Breeze 3 Angular 22 App
+
+Here are some steps to follow to create a new [Angular](https://angular.dev) 22 application, using
+[Breeze 3](https://breeze.github.io/breeze-client-v3/) (`breeze-client` 3.0.0) to handle the data management.
+
+We will assume that you've already got the server side created, following the outline described in the [STEPS](../STEPS.md) document.
+
+For the client, we will start with an empty directory and build an application that
+talks to the server, using Breeze to query and update data.
+
+Along the way we will:
+
+- Create an Angular application using the CLI
+- Create TypeScript entity classes from the server metadata
+- Create an Angular component to read and update entities
+
+> This is the Breeze 3 version of [STEPS-Client-Angular22](STEPS-Client-Angular22.md), which uses
+> `breeze-client` 2.x and lives in the [northwind-angular22](northwind-angular22) directory.  The finished
+> Breeze 3 app is in [northwind-angular22-v3](northwind-angular22-v3).  The Angular parts are the same; the
+> Breeze setup is simpler.  A summary of what changed is at the
+> [end of this document](#whats-different-from-the-breeze-2-version).
+
+# Create the Angular App
+
+To create the initial shell of the Angular app, we will use the Angular CLI as instructed in the [Angular CLI Guide](https://angular.dev/installation).
+
+First, make sure you have [nodejs](https://nodejs.org) and [npm](https://docs.npmjs.com/) installed.
+
+**Angular 22 requires Node.js v22.22.3 or later** (or v24.15+, or v26+).  Older versions of Node - including
+Node 22 releases earlier than 22.22.3 - will refuse to run the CLI with a message like:
+
+```
+Node.js version v22.14.0 detected.
+The Angular CLI requires a minimum Node.js version of v22.22.3 or v24.15.0 or v26.0.0.
+```
+
+Check yours with `node --version` and upgrade if needed before continuing.  (Breeze 3 itself needs Node 20 or
+later, so Angular is the stricter requirement.)  The sample includes an `.nvmrc` file that selects Node v24.15.0,
+so if you use [nvm](https://github.com/nvm-sh/nvm) you can just run `nvm use` in the app directory.
+
+Next, open a command prompt in the `client` directory, and follow the steps below:
+
+1. `npx @angular/cli@22 new northwind-angular22-v3 --style=css --ssr=false`
+  - The `--style=css` flag chooses plain CSS for the stylesheet format
+  - The `--ssr=false` flag skips server-side rendering, which this demo does not need
+
+Those two flags answer the only questions the CLI would otherwise ask, so the command runs without
+prompting.  Note that there is no longer a prompt for routing - it is always configured now.
+
+Now you should have a `client/northwind-angular22-v3` directory containing the Angular app.  Try it out:
+
+`cd northwind-angular22-v3`
+`ng serve --open`
+
+This will compile the app and open a browser on http://localhost:4200 with a welcome page.
+
+You can learn more about the app structure in the [Angular workspace documentation](https://angular.dev/reference/configs/file-structure)
+
+Stop the server from the command line using Ctrl-C.
+
+The application the CLI generates is quite different from the one in the Angular 8 walkthrough:
+
+- It is **standalone**.  There is no `AppModule`; `main.ts` calls `bootstrapApplication(App, appConfig)`, and
+  configuration lives in `src/app/app.config.ts`.
+- It is **zoneless**.  `zone.js` is not even a dependency.  Angular no longer discovers changes by patching
+  browser async APIs, so a component's state has to be held in **signals** for the template to re-render.
+  This matters for us, because Breeze delivers query results in a promise.
+- It uses **Vitest** rather than Karma and Jasmine for unit tests, and there is no Protractor e2e setup.
+
+## Add Breeze
+
+Now we'll add Breeze to the app, so we can query entities from the server and update them.
+
+In the `northwind-angular22-v3` directory, run:
+
+`npm install breeze-client`
+
+That's the only package we need.  Breeze 3 has no runtime dependencies, and the entity generator is now
+published inside `breeze-client` itself (as the `breeze-gen-entities` command), so the separate
+`breeze-entity-generator` package is no longer used.
+
+> Breeze 3 is **ESM only** - there is no CommonJS or UMD build.  That is no problem for an Angular 22 app,
+> whose build is ESM throughout.
+
+## Generate Entities
+
+When developing our app, it's helpful to have TypeScript classes to represent the entity data that comes from the
+server.  Breeze can generate them for us from the server's metadata.
+
+In the Breeze 2 version we first wrote a `BaseEntity` class for the entities to extend.  **That step is gone.**
+Breeze 3 provides `EntityBase` (and `ComplexObjectBase` for complex types), and the generated classes extend it
+directly.
+
+#### Get the metadata
+
+The entity generator reads the same metadata that the app will load at runtime, so we keep a copy of it in the
+app, at `src/app/model/metadata.json`.
+
+You should already know how to generate a `metadata.json` file from the server.
+If you don't, see the "Generate the metadata" topic in the server document.
+
+To make it easy to refresh, add a script to the `scripts` section of `package.json` that runs the
+[NorthwindNet10](../server/NorthwindNet10) server's metadata command and writes the result straight into the app:
+```json
+    "generate-metadata": "dotnet ../../server/NorthwindNet10/NorthwindServer/bin/Debug/net10.0/NorthwindServer.dll metadata > src/app/model/metadata.json"
+```
+Create the `src/app/model` directory, build the server, and then run:
+
+`npm run generate-metadata`
+
+_If you are using a different server, just copy its `metadata.json` file to `src/app/model/metadata.json` instead._
+
+#### Generate entities from metadata
+
+In the Breeze 2 version we had to write a `generate-entities.js` script to drive the generator.  Now it is a
+single command.  Add another script to `package.json`:
+```json
+    "generate-entities": "breeze-gen-entities --metadata src/app/model/metadata.json --out src/app/model"
+```
+Then run it:
+
+`npm run generate-entities`
+
+This should create files in the `northwind-angular22-v3/src/app/model` directory, next to `metadata.json`:
+```
+customer.ts
+index.ts
+order-item.ts
+order.ts
+product.ts
+supplier.ts
+```
+These are the entity classes, plus an `index.ts` that exports them all along with a `registerModelClasses`
+function that we will use later.  There is no longer a generated `metadata.ts` or `registration-helper.ts`:
+the metadata is imported directly from the JSON file, and `index.ts` takes the place of the registration helper.
+
+Open `customer.ts` and look at the class:
+```ts
+import type { RelationArray } from 'breeze-client'; // @generated
+import { EntityBase } from 'breeze-client'; // @generated
+import type { Order } from './order'; // @generated
+
+export class Customer extends EntityBase {
+  declare id: number;  // @generated
+  declare city: string;  // @generated
+  declare country: string;  // @generated
+  declare firstName: string;  // @generated
+  declare lastName: string;  // @generated
+  declare phone: string;  // @generated
+  declare orders: RelationArray<Order>;  // @generated
+}
+```
+A few things are different from the Breeze 2 output:
+
+- The properties use **`declare`** rather than the `!` and `?` annotations.  `declare` tells TypeScript that the
+  property exists without emitting any code for it, so the class never shadows the properties that Breeze
+  defines on the entity at runtime.  It also satisfies TypeScript 6's strict mode.  If you want nullable
+  properties typed as `string | null`, add `--nullable` to the generator command.
+- Collection navigation properties are typed as **`RelationArray<T>`**, which is what Breeze actually puts there.
+- Imports of other entity classes are `import type`, so the classes don't import each other at runtime.
+
+#### Regenerating
+
+You can rerun `npm run generate-entities` whenever the metadata changes.  The generator updates the files
+**in place**, one property at a time: properties that are in the metadata are rewritten (and marked
+`// @generated`), new ones are added, and ones that have left the metadata are removed.  Anything else you add to
+a class - methods, getters, constructors, unmapped properties, imports - is left alone.  So, unlike the Breeze 2
+generator, there are no special `<code>` regions to write your code in.
+
+To protect something the generator would otherwise rewrite, mark it with `// @manual` (one declaration),
+`// @manual-start` ... `// @manual-end` (a block), or `// @manual-file` (the whole file).
+
+Run `npx breeze-gen-entities --help` to see the other options, such as `--base` to give all of the entities a
+base class of your own.
+
+## Configure the application
+
+Now we need to configure Breeze to work with Angular.
+
+Breeze 3 needs much less configuration than Breeze 2.  The adapters that we used to register one by one -
+`ModelLibraryBackingStoreAdapter`, `UriBuilderJsonAdapter`, `DataServiceWebApiAdapter` - are now the defaults,
+and `NamingConvention.camelCase` is now the default naming convention.  There is no ajax adapter any more: Breeze
+sends its HTTP requests through a `fetch` function, which defaults to the browser's `fetch`.
+
+That means a Breeze 3 app talking to a Breeze .NET server **needs no configuration at all**.  We'll add one
+line anyway, so that Breeze sends its requests through Angular's `HttpClient`.  That way they pass through any
+HTTP interceptors the app adds later (for authentication headers, for instance), and they can be mocked with
+`HttpTestingController` in unit tests.
+
+We still configure Breeze in an **app initializer**, which runs once during bootstrap - before any component can
+ask for an `EntityManager`.
+
+Edit `northwind-angular22-v3/src/app/app.config.ts` and replace the contents with:
+```ts
+import { HttpClient, provideHttpClient } from '@angular/common/http';
+import {
+  ApplicationConfig,
+  inject,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { configureBreeze } from 'breeze-client';
+import { httpClientFetch } from 'breeze-client/adapter-angular-httpclient';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideRouter(routes),
+    provideHttpClient(),
+    // Configure Breeze before anything creates an EntityManager.
+    // This is the standalone equivalent of the AppModule constructor.
+    provideAppInitializer(() => {
+      const http = inject(HttpClient);
+      configureBreeze({ fetch: httpClientFetch(http) });
+    }),
+  ],
+};
+```
+`configureBreeze` is Breeze 3's single, typed configuration call.  Every option is optional:
+
+ - `fetch` - the function Breeze makes every HTTP request with.  `httpClientFetch(http)` wraps Angular's `HttpClient`
+ - `namingConvention` - how Breeze converts property names between client and server.  The default is
+   `NamingConvention.camelCase`; use `NamingConvention.none` if your server already sends camel-cased names
+ - `modelLibrary`, `uriBuilder`, `dataService` - replace one of the default adapters
+
+`httpClientFetch` comes from `breeze-client/adapter-angular-httpclient`, the Breeze 3 replacement for
+`breeze-client/adapter-ajax-httpclient`.  It is kept in its own entry point so that Angular stays out of the core
+Breeze build.  It also takes care of an `HttpClient` quirk: `HttpClient` throws on an error status, but Breeze
+needs the error response's body to report validation errors from a failed save, so `httpClientFetch` hands the
+response to Breeze anyway.
+
+Since the adapters are no longer registered by hand, there is also no longer a registration order to get right.
+
+## Create the environment settings
+
+The client application needs to know the URL to reach the server.  This sort of thing is environment-specific,
+so we'll keep it in the environment files.
+
+The CLI no longer creates them for you, so generate them:
+
+`ng generate environments`
+
+That creates `src/environments/environment.ts` and `src/environments/environment.development.ts`, and wires the
+file replacement into `angular.json`.
+
+> The sense of these files is **inverted** compared to the Angular 8 project.  `environment.ts` is now the
+> *production* file - the one your code imports - and `environment.development.ts` replaces it during a
+> development build.  (Previously `environment.ts` was the development file and `environment.prod.ts`
+> replaced it.)
+
+Put the `breezeApiRoot` in **both** files.  The port should be the one on which your NorthwindServer is
+listening, and the path is the path to your BreezeController.
+
+`src/environments/environment.ts`:
+```ts
+export const environment = {
+  production: true,
+  breezeApiRoot: 'http://localhost:4000/api/breeze',
+};
+```
+
+`src/environments/environment.development.ts`:
+```ts
+export const environment = {
+  production: false,
+  breezeApiRoot: 'http://localhost:4000/api/breeze',
+};
+```
+
+## Create the EntityManagerProvider
+
+In a Breeze application, the [EntityManager](https://breeze.github.io/breeze-client-v3/) caches the
+entities and keeps track of the changes.  You may need more than one, if you want to keep multiple change sets.  To make
+it easy, we will create a service called the EntityManagerProvider.
+
+Create the file `northwind-angular22-v3/src/app/entity-manager-provider.ts`.  In the file, put:
+```ts
+import { Injectable } from '@angular/core';
+import { DataService, EntityManager } from 'breeze-client';
+import { environment } from '../environments/environment';
+import { registerModelClasses } from './model';
+import metadata from './model/metadata.json';
+
+@Injectable({ providedIn: 'root' })
+export class EntityManagerProvider {
+
+  protected masterManager: EntityManager;
+
+  constructor() {
+    const dataService = new DataService({
+      serviceName: environment.breezeApiRoot,
+      hasServerMetadata: false
+    });
+
+    this.masterManager = new EntityManager({ dataService });
+    const metadataStore = this.masterManager.metadataStore;
+    metadataStore.importMetadata(metadata);
+    registerModelClasses(metadataStore);
+  }
+
+  newManager(): EntityManager {
+    return this.masterManager.createEmptyCopy();
+  }
+}
+```
+This code creates a new "master" manager and configures its metadata.
+It exposes a `newManager()` method that creates a copy of the master complete with metadata.
+When we need an EntityManager, we call the `newManager()` method.
+
+Only two lines differ from the Breeze 2 version:
+
+- The metadata is **imported straight from `metadata.json`**, rather than from a generated `metadata.ts` that
+  wrapped the same JSON in a string.  No extra configuration is needed for the JSON import: the CLI's
+  `tsconfig.json` uses `"module": "preserve"`, which turns on `resolveJsonModule`.
+- `registerModelClasses` (from the generated `model/index.ts`) replaces `NorthwindRegistrationHelper.register`.
+  It tells the MetadataStore to use our generated classes when it creates `Customer`, `Order`, and the other
+  entities.
+
+## Create the Customer component
+
+Now create a component to display some customer data.  Open a command prompt in the `northwind-angular22-v3` directory, and execute the command:
+
+`ng generate component customer --type=component`
+
+Then look in the `src/app/customer` directory to see the component files:
+```
+customer.component.css
+customer.component.html
+customer.component.spec.ts
+customer.component.ts
+```
+
+> **Why `--type=component`?**  Modern Angular drops the `.component` suffix by default, so plain
+> `ng generate component customer` would create `customer.ts` exporting a class named `Customer` - which
+> collides with the `Customer` entity class we just generated.  The `--type=component` flag restores the
+> older naming and keeps the two apart.
+
+From here on, the code is **exactly the same as in the Breeze 2 version**: Breeze 3 kept the same public API for
+querying, creating, editing, and saving entities.
+
+## Show the Customer component
+
+The new component won't display yet because there is no way to get to it.  We will fix that by adding a route to it.
+
+First, edit `app.html` and delete **everything**, replacing it with a heading and the router outlet:
+```html
+<h1>Northwind</h1>
+<router-outlet></router-outlet>
+```
+Then edit `app.routes.ts` and add some routes:
+```ts
+import { Routes } from '@angular/router';
+import { CustomerComponent } from './customer/customer.component';
+
+export const routes: Routes = [
+  {
+    path: 'customers',
+    component: CustomerComponent,
+  },
+  {
+    path: '**',
+    redirectTo: 'customers'
+  }
+];
+```
+The first route will load the CustomerComponent into the `router-outlet` if the url is /customers.
+
+The second route will redirect to /customers if the current url doesn't match any other route.  Since there are no other routes, our CustomerComponent should always be displayed.
+
+Try it now: if the app is not already running, open a command prompt in the `northwind-angular22-v3` directory and run:
+
+`ng serve --open`
+
+You should see a screen that says "Northwind" followed by "customer works!".
+
+### Start the server
+
+Start the server project now (`NorthwindServer` or `NorthwindSequelize`), so it will be available to serve data requests.  If you haven't created the server,
+refer back to the [STEPS](../STEPS.md) document.
+
+### Get Customer data
+
+Edit `customer.component.ts`.  In the body of the `CustomerComponent` class, add an EntityManager and a list of Customers:
+```ts
+  readonly manager = inject(EntityManagerProvider).newManager();
+  readonly customers = signal<Customer[]>([]);
+```
+Then add an `ngOnInit` method that performs a Breeze query:
+```ts
+  ngOnInit() {
+    const query = new EntityQuery('Customers').where('lastName', 'startsWith', 'C');
+    this.manager.executeQuery(query).then(qr => {
+      this.customers.set(qr.results);
+    });
+  }
+```
+Note that, to keep the display size small, we've limited the results to just those customers whose `lastName` starts with "C".
+
+> **Zoneless Angular needs signals here.**  With no zone.js, a plain field assignment like
+> `this.customers = qr.results` would update the data but never repaint the screen.  Holding the list in a
+> `signal` and calling `.set()` is what tells Angular to re-render.
+>
+> Also note the component uses `inject()` rather than constructor injection.  Either style works; `inject()`
+> is the current idiom.
+
+### Show the data
+
+Edit the HTML template, `customer.component.html`.  Add a `@for` loop to display some properties of the customers:
+```html
+<p>customer works!</p>
+
+<table>
+  @for (cust of customers(); track cust) {
+    <tr>
+      <td>{{cust.firstName}} {{cust.lastName}}</td>
+    </tr>
+  }
+</table>
+```
+`@for` is Angular's built-in control flow, which replaces the `*ngFor` structural directive.  It requires a
+`track` expression, and it needs no module import.  Note the parentheses on `customers()` - it is a signal, so
+we call it to read its value.
+
+Now you should see the data display on the page:
+```
+Northwind
+
+customer works!
+
+Frédérique Citeaux
+Francisco Chang
+Aria Cruz
+Philip Cramer
+Simon Crowther
+Lúcia Carvalho
+Alejandra Camino
+Pascale Cartrain
+```
+
+## Editing
+
+Now we'll add editing functions to the CustomerComponent.  The behavior will be:
+
+ - Click on a row to select a customer
+ - A form allows editing or deleting the selected customer
+ - One or more customers can be edited before saving
+ - A save button saves the changes to the database
+ - A revert button restores all customers to their last-saved condition
+
+### Change Component Class
+
+We'll start in the `customer.component.ts` file.  First add a signal to keep track of the selected customer:
+```ts
+  readonly selected = signal<Customer | undefined>(undefined);
+```
+Then add methods to add a customer, delete a customer, save changes, and revert changes:
+```ts
+  addCustomer() {
+    const cust = this.manager.createEntity(Customer.prototype.entityType) as Customer;
+    this.selected.set(cust);
+    this.customers.update(customers => [...customers, cust]);
+  }
+
+  delete(cust: Customer) {
+    cust.entityAspect.setDeleted();
+  }
+
+  saveChanges() {
+    this.manager.saveChanges().then(() => {
+      // refresh customer list to remove deleted customers
+      this.customers.set(this.manager.getEntities('Customer') as Customer[]);
+    });
+  }
+
+  rejectChanges() {
+    this.manager.rejectChanges();
+    this.customers.set(this.manager.getEntities('Customer') as Customer[]);
+  }
+```
+`addCustomer` uses `update()` with a new array rather than `push()`.  A signal only notifies its readers when
+it is *set* to a new value, so mutating the existing array in place would not trigger a re-render.
+
+`Customer.prototype.entityType` works because `registerModelClasses` attached the `Customer` class to the
+metadata.  The `entityType` and `entityAspect` properties now come from Breeze's `EntityBase` rather than from a
+base class of our own.
+
+The finished class needs these imports:
+```ts
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { EntityQuery } from 'breeze-client';
+import { Customer } from '../model/customer';
+import { EntityManagerProvider } from '../entity-manager-provider';
+```
+and `FormsModule` added to the component's own `imports` array, which is where a standalone component declares
+its dependencies:
+```ts
+@Component({
+  selector: 'app-customer',
+  imports: [FormsModule],
+  templateUrl: './customer.component.html',
+  styleUrl: './customer.component.css',
+})
+```
+
+### Select a customer
+
+Now we'll change the HTML template to allow selecting a customer from the list.
+
+_NOTE: We are intentionally using a minimum of styling to keep things simple._
+
+Edit `customer.component.html` and change the `table`.
+Add a click event that sets the selected customer, and a style binding that highlights the selected line.
+
+Add another table column that shows the state of each customer entity.
+```html
+<table>
+  @for (cust of customers(); track cust) {
+    <tr (click)="selected.set(cust)"
+      [style.background-color]="selected() === cust ? 'lightgray' : 'white'">
+      <td>{{cust.firstName}} {{cust.lastName}}</td>
+      <td>{{cust.entityAspect.entityState}}</td>
+    </tr>
+  }
+</table>
+```
+We use a direct `[style.background-color]` binding instead of the `ngStyle` directive, which saves importing
+`CommonModule`.
+
+Try it, and make sure the rows highlight when you click on them.
+
+### Add a customer
+
+Below the table, create an "Add" button that calls the `addCustomer` method in the component class.
+```html
+<button type="button" (click)="addCustomer()">Add</button>
+```
+
+### Edit customer properties
+
+Below the "Add" button, create a set of inputs for editing the properties of the customer.
+
+Use `@if` to only show this section if a customer is selected and the customer is not marked for deletion.
+
+Also create a "Delete" button that calls the `delete` method in the component class.
+```html
+@if (selected(); as cust) {
+  @if (!cust.entityAspect.entityState.isDeleted()) {
+    <div>
+      <h3>Edit</h3>
+      <div>First Name: <input type="text" name="firstName" [(ngModel)]="cust.firstName"></div>
+      <div>Last Name: <input type="text" name="lastName" [(ngModel)]="cust.lastName"></div>
+      <div>City: <input type="text" name="city" [(ngModel)]="cust.city"></div>
+      <div>Country: <input type="text" name="country" [(ngModel)]="cust.country"></div>
+      <div>Phone: <input type="text" name="phone" [(ngModel)]="cust.phone"></div>
+      <button type="button" (click)="delete(cust)">Delete</button>
+    </div>
+  }
+}
+```
+The `@if (selected(); as cust)` form reads the signal once and gives the result a name, so the `[(ngModel)]`
+bindings can write straight to the entity's properties - which is what puts the entity into the `Modified`
+state.
+
+### Save and Revert
+
+Below the editing section, add a "Save Changes" button that calls the `saveChanges` method in the component class.
+
+Add a "Revert Changes" button that calls the `rejectChanges` method in the component class.
+
+Only show the buttons if there are changes to entities in the entity manager's cache.
+```html
+@if (manager.hasChanges()) {
+  <div>
+    <hr>
+    <button type="button" (click)="saveChanges()">Save Changes</button>
+    <button type="button" (click)="rejectChanges()">Revert Changes</button>
+  </div>
+}
+```
+`manager.hasChanges()` is an ordinary method call rather than a signal, and that is fine here: every action
+that can change the answer is a template event handler, and event handlers schedule change detection even in a
+zoneless app.
+
+### Test the editing
+
+Now you should be able to add a new Customer, edit the properties of new and existing customers, delete customers, and save
+the changes in a batch.  (Remember that we only query customers where lastName starts with "C").
+
+If you open your browser's developer tools (F12), you can see the network traffic between the Breeze client and the server API
+as queries and saves are sent.
+
+## A note on unit tests
+
+`ng test` runs [Vitest](https://vitest.dev) against a jsdom browser.  Three things are worth knowing if you
+write component tests against Breeze:
+
+- **The app initializer does not run in a component test**, so configure Breeze yourself in `beforeEach`, after
+  `TestBed.configureTestingModule`.  Passing the test's `HttpClient` points Breeze at the
+  `HttpTestingController` backend, so you can answer its requests with `expectOne(...).flush(...)`:
+  ```ts
+  import { configureBreeze } from 'breeze-client';
+  import { httpClientFetch } from 'breeze-client/adapter-angular-httpclient';
+  ...
+    configureBreeze({ fetch: httpClientFetch(TestBed.inject(HttpClient)) });
+  ```
+  This one call replaces the four `register()` calls and the `NamingConvention` call of the Breeze 2 spec.
+- **Breeze registers an entity class with a single MetadataStore.**  Creating a fresh
+  `EntityManagerProvider` in every `beforeEach` will fail on the second test, because `registerModelClasses`
+  would attach the same classes to a second store.  Share one provider across the spec file and let
+  `newManager()` give each test its own EntityManager.
+- **In a zoneless test, `fixture.whenStable()` does not wait for Breeze's promises.**  Angular only knows
+  about its own scheduler, so after flushing a mocked response you need to yield to the task queue
+  (`await new Promise(resolve => setTimeout(resolve, 0))`) and then call `fixture.detectChanges()` before
+  asserting against the DOM.  This applies only to tests; the running application repaints on its own.
+
+## What's different from the Breeze 2 version
+
+| | Breeze 2 (`northwind-angular22`) | Breeze 3 (`northwind-angular22-v3`) |
+|---|---|---|
+| npm packages | `breeze-client` 2.x + `breeze-entity-generator` | `breeze-client` 3.x only |
+| Module format | ESM + CommonJS/UMD builds | ESM only |
+| Entity generation | hand-written `generate-entities.js` | `breeze-gen-entities` command (an npm script) |
+| Entity base class | hand-written `src/app/base-entity.ts` | `EntityBase` from `breeze-client` |
+| Generated properties | `!` / `?` annotations | `declare` |
+| Collection navigation type | `T[]` | `RelationArray<T>` |
+| Custom code in entity classes | between `<code>` tags | anywhere; `// @manual` markers to protect a property |
+| Metadata in the app | generated `model/metadata.ts` | `model/metadata.json`, imported directly |
+| Class registration | `NorthwindRegistrationHelper.register()` | `registerModelClasses()` from `model/index.ts` |
+| Breeze configuration | register four adapters + `NamingConvention.camelCase.setAsDefault()` | `configureBreeze({ fetch: httpClientFetch(http) })` |
+| Angular HTTP integration | `breeze-client/adapter-ajax-httpclient` | `breeze-client/adapter-angular-httpclient` |
+| Default naming convention | `none` | `camelCase` |
+
+The Angular parts of the app - routing, environments, the component, its template, and the query/save calls -
+are unchanged.  For every change between Breeze 2 and Breeze 3, see the
+[upgrade guide](https://github.com/Breeze/breeze-client-v3/blob/main/UPGRADE.md).
+
+## Conclusion
+
+We have come to the end of our journey.
+
+We've created an Angular + Breeze application from the ground up,
+using tools to create a simple entity model from the database for both the client and server parts of the application.
+
+We now have an application that can create, read, update, and delete data.  It's ready for an improved UI,
+and it's ready to be extended to cover more entity types and more complex use cases.
+<hr>
+If you have problems with this demo, please create issues in this github repo.
+
+If you have questions about Breeze, please ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/breeze).
+
+If you need help developing your application, please contact us at [IdeaBlade](mailto:info@ideablade.com).
