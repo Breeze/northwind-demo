@@ -1,0 +1,81 @@
+<div class="toolbar">
+  <p-button label="Customers" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/customers" />
+</div>
+
+@if (order(); as order) {
+  <div class="layout">
+    <p-panel [header]="'Order ' + order.orderNumber">
+      <div class="details">
+        <section>
+          <h3>Order</h3>
+          <dl>
+            <dt>Order Number</dt>
+            <dd>{{order.orderNumber}}</dd>
+            <dt>Order Date</dt>
+            <dd>{{order.orderDate | date}}</dd>
+            <dt>Total Amount</dt>
+            <dd>{{order.totalAmount | currency}}</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Customer</h3>
+          <dl>
+            <dt>Name</dt>
+            <dd>{{order.customer.firstName}} {{order.customer.lastName}}</dd>
+            <dt>City</dt>
+            <dd>{{order.customer.city}}</dd>
+            <dt>Country</dt>
+            <dd>{{order.customer.country}}</dd>
+            <dt>Phone</dt>
+            <dd>{{order.customer.phone}}</dd>
+          </dl>
+        </section>
+      </div>
+    </p-panel>
+
+    <p-panel header="Order Items">
+      <p-table class="order-items" [value]="orderItems()" dataKey="id" size="small">
+        <ng-template #header>
+          <tr>
+            <th>Product</th>
+            <th>Package</th>
+            <th>Supplier</th>
+            <th class="number">Unit Price</th>
+            <th class="number">Quantity</th>
+            <th class="number">Total</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-item>
+          <tr>
+            <td>
+              {{item.product.productName}}
+              @if (item.product.isDiscontinued) {
+                <p-tag value="Discontinued" severity="warn" />
+              }
+            </td>
+            <td>{{item.product.package}}</td>
+            <td>{{item.product.supplier.companyName}}</td>
+            <td class="number">{{item.unitPrice | currency}}</td>
+            <td class="number">{{item.quantity}}</td>
+            <td class="number">{{lineTotal(item) | currency}}</td>
+          </tr>
+        </ng-template>
+        <ng-template #footer>
+          <tr>
+            <td colspan="5">Total</td>
+            <td class="number">{{order.totalAmount | currency}}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="6">This order has no items.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-panel>
+  </div>
+} @else {
+  <p-panel header="Order">
+    <p class="hint">{{ loading() ? 'Loading order...' : 'Order ' + id() + ' was not found.' }}</p>
+  </p-panel>
+}

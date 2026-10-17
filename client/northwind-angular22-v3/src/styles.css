@@ -17,3 +17,7 @@ h1 {
   margin: 0 0 1.5rem;
   font-weight: 600;
 }
+
+a {
+  color: var(--p-primary-color);
+}

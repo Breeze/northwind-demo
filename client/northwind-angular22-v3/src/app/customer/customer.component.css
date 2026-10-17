@@ -5,6 +5,14 @@
   align-items: start;
 }
 
+.orders-panel {
+  grid-column: 1 / -1;
+}
+
+.amount {
+  text-align: right;
+}
+
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);

@@ -14,11 +14,15 @@ Along the way we will:
 - Create TypeScript entity classes from the server metadata
 - Create an Angular component to read and update entities
 - Give the component a polished UI with the [Optimus UI](https://optimus.openng.org) component library
+- Show each customer's orders, loading them on demand through a navigation property
+- Create a second page, reached by a route with a parameter, that shows an order with its related entities
+- Protect unsaved changes with a route guard and a confirmation dialog
 
 > This is the Breeze 3 version of [STEPS-Client-Angular22](STEPS-Client-Angular22.md), which uses
 > `breeze-client` 2.x and lives in the [northwind-angular22](northwind-angular22) directory.  The finished
 > Breeze 3 app is in [northwind-angular22-v3](northwind-angular22-v3).  The Angular parts are the same up to
-> the Optimus UI section, which is new in this version; the Breeze setup is simpler.  A summary of what
+> the Optimus UI section; that section and the ones after it are new in this version.  The Breeze setup is
+> simpler.  A summary of what
 > changed is at the [end of this document](#whats-different-from-the-breeze-2-version).
 
 # Create the Angular App
@@ -914,10 +918,591 @@ Run `ng serve --open` again, with the server running.  You should see the Custom
 Everything works as before: click a row to select a customer, edit it in the form, and watch its state tag
 change from Unchanged to Modified.  Add, delete, save and revert all work the same way.
 
+## Show the customer's orders
+
+So far we've only worked with one entity type.  Now we'll use Breeze's navigation properties to show the orders of
+the selected customer, in a third panel below the other two.
+
+Each `Customer` has an `orders` property, but our query didn't fetch them: it only asked for customers.  We could
+have added `.expand('orders')` to the query to fetch every customer's orders up front, but it's more efficient to
+fetch the orders of a customer only when the user selects that customer.  Breeze does that with
+`entityAspect.loadNavigationProperty('orders')`, which queries the server for the orders whose `customerId` matches
+the customer, adds them to the EntityManager's cache, and so fills in `customer.orders`.
+
+Breeze also remembers that it has loaded the property, so `entityAspect.isNavigationPropertyLoaded('orders')` lets
+us skip the query the next time the same customer is selected.
+
+### Change the component class
+
+Edit `customer.component.ts`.  Add an import for the `Order` class and for Angular's date and currency pipes:
+```ts
+import { CurrencyPipe, DatePipe } from '@angular/common';
+...
+import { Order } from '../model/order';
+```
+and add `CurrencyPipe` and `DatePipe` to the component's `imports` array:
+```ts
+  imports: [CurrencyPipe, DatePipe, FormsModule, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+```
+
+Add two signals, for the orders to display and for whether they are still loading:
+```ts
+  readonly orders = signal<Order[]>([]);
+  readonly ordersLoading = signal(false);
+```
+
+Selecting a customer now has to load that customer's orders too, so add a `select` method for the table to call
+instead of setting `selected` directly, and a `loadOrders` method that does the work:
+```ts
+  select(cust: Customer | undefined) {
+    this.selected.set(cust);
+    this.loadOrders(cust);
+  }
+
+  // Show the customer's orders.  They are queried from the server the first time
+  // the customer is selected; after that, Breeze has them in its cache.
+  private loadOrders(cust: Customer | undefined) {
+    this.ordersLoading.set(false);
+    if (!cust) {
+      this.orders.set([]);
+      return;
+    }
+    const aspect = cust.entityAspect;
+    if (aspect.entityState.isAdded() || aspect.isNavigationPropertyLoaded('orders')) {
+      this.orders.set([...cust.orders]);
+      return;
+    }
+    this.orders.set([]);
+    this.ordersLoading.set(true);
+    aspect.loadNavigationProperty('orders').finally(() => {
+      // ignore the result if another customer was selected in the meantime
+      if (this.selected() === cust) {
+        this.orders.set([...cust.orders]);
+        this.ordersLoading.set(false);
+      }
+    });
+  }
+```
+A few things to note:
+
+ - A customer we just added (`isAdded()`) doesn't exist on the server yet, so there is nothing to query
+ - `cust.orders` is a Breeze `RelationArray` that Breeze updates in place.  We copy it into a new array with
+   `[...cust.orders]` so that setting the signal gives the table a new value
+ - The user can click another customer before the query returns.  Checking `this.selected() === cust` makes sure
+   a late result doesn't overwrite the orders of the customer that is now selected
+
+`addCustomer` should select the new customer the same way, so change its `this.selected.set(cust)` to:
+```ts
+    this.select(cust);
+```
+
+Finally, add a method for the title of the new panel:
+```ts
+  ordersHeader() {
+    const cust = this.selected();
+    return cust ? `Orders for ${cust.firstName ?? ''} ${cust.lastName ?? ''}` : 'Orders';
+  }
+```
+The `?? ''` keeps "undefined" out of the title while a new customer's name is still blank.
+
+### Change the template
+
+In `customer.component.html`, change the customer table's `(selectionChange)` to call `select`.  While we're
+there, give the table a class, so that it is easy to tell apart from the orders table in unit tests:
+```html
+    <p-table class="customers" [value]="customers()" dataKey="id" selectionMode="single"
+      [selection]="selected()" (selectionChange)="select($event ?? undefined)"
+      size="small" [rowHover]="true">
+```
+
+Then add a third panel, just before the closing `</div>` of the layout:
+```html
+  <p-panel class="orders-panel" [header]="ordersHeader()">
+    <p-table class="orders" [value]="orders()" [loading]="ordersLoading()" dataKey="id" size="small">
+      <ng-template #header>
+        <tr>
+          <th>Order Number</th>
+          <th>Order Date</th>
+          <th class="amount">Total Amount</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-order>
+        <tr>
+          <td>{{order.orderNumber}}</td>
+          <td>{{order.orderDate | date}}</td>
+          <td class="amount">{{order.totalAmount | currency}}</td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="3">{{ selected() ? 'No orders.' : 'Select a customer to see their orders.' }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-panel>
+```
+`[loading]` shows a spinner over the table while the orders are being fetched.  The `date` and `currency` pipes
+format the order date and total amount.
+
+### Lay out the orders panel
+
+In `customer.component.css`, add these rules after the `.layout` rule, so the orders panel spans the full width
+below the other two panels, and the amounts line up on the right:
+```css
+.orders-panel {
+  grid-column: 1 / -1;
+}
+
+.amount {
+  text-align: right;
+}
+```
+
+Try it: select a customer, and you should see that customer's orders.  In the browser's network tab, you'll see a
+request to `Orders` the first time you select each customer, and none when you select the customer again.
+
+## Create the Order component
+
+Next we'll add a second page that shows one order in detail: the order and its customer in one panel, and the
+order's items, with their products and suppliers, in another.  Clicking an order number in the customer page will
+open it, with the order id in the URL, for example `/orders/1`.
+
+In the `northwind-angular22-v3` directory, run:
+
+`ng generate component order --type=component`
+
+### Query the order and its related entities
+
+This time we know up front that we want the related entities, so we fetch them all in a single query with
+`expand`.  The expand path `orderItems.product.supplier` follows the navigation properties from each order item to
+its product, and from each product to its supplier.
+
+Replace the contents of `order.component.ts` with:
+```ts
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, OnInit, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { ButtonModule } from '@openng/optimus-ui/button';
+import { PanelModule } from '@openng/optimus-ui/panel';
+import { TableModule } from '@openng/optimus-ui/table';
+import { TagModule } from '@openng/optimus-ui/tag';
+import { EntityQuery } from 'breeze-client';
+import { Order } from '../model/order';
+import { OrderItem } from '../model/order-item';
+import { EntityManagerProvider } from '../entity-manager-provider';
+
+@Component({
+  selector: 'app-order',
+  imports: [CurrencyPipe, DatePipe, RouterLink, ButtonModule, PanelModule, TableModule, TagModule],
+  templateUrl: './order.component.html',
+  styleUrl: './order.component.css',
+})
+export class OrderComponent implements OnInit {
+
+  /** The order id, bound from the `orders/:id` route parameter. */
+  readonly id = input.required<string>();
+
+  readonly manager = inject(EntityManagerProvider).newManager();
+  readonly order = signal<Order | undefined>(undefined);
+  readonly orderItems = signal<OrderItem[]>([]);
+  readonly loading = signal(true);
+
+  ngOnInit() {
+    // Get the order, its customer, and its items with their products and suppliers, in one query
+    const query = new EntityQuery('Orders')
+      .where('id', '==', Number(this.id()))
+      .expand('customer, orderItems.product.supplier');
+    this.manager.executeQuery(query).then(qr => {
+      const order = qr.results[0] as Order | undefined;
+      this.order.set(order);
+      this.orderItems.set(order ? [...order.orderItems] : []);
+    }).finally(() => {
+      this.loading.set(false);
+    });
+  }
+
+  lineTotal(item: OrderItem) {
+    return item.unitPrice * item.quantity;
+  }
+}
+```
+The order id comes from the URL.  The `id` **input** receives it from the router, which we'll set up below.  It
+is a string, like all route parameters, so we convert it with `Number()` before comparing it with the numeric `id`
+property.
+
+As with the customer list, we use the client-side, camel-cased property names in the query.  Breeze sends the
+server's names, so the request looks like this:
+```
+/api/breeze/Orders?{"where":{"Id":1},"expand":["Customer","OrderItems.Product.Supplier"]}
+```
+The response contains the order with its customer and items, and each item's product and supplier.  Breeze puts
+all of them in the cache and connects them, so in the template we can simply write
+`item.product.supplier.companyName`.
+
+The component has its own EntityManager, so it always fetches a fresh copy of the order.
+
+### The template
+
+Replace the contents of `order.component.html` with:
+```html
+<div class="toolbar">
+  <p-button label="Customers" icon="pi pi-arrow-left" severity="secondary" [text]="true" routerLink="/customers" />
+</div>
+
+@if (order(); as order) {
+  <div class="layout">
+    <p-panel [header]="'Order ' + order.orderNumber">
+      <div class="details">
+        <section>
+          <h3>Order</h3>
+          <dl>
+            <dt>Order Number</dt>
+            <dd>{{order.orderNumber}}</dd>
+            <dt>Order Date</dt>
+            <dd>{{order.orderDate | date}}</dd>
+            <dt>Total Amount</dt>
+            <dd>{{order.totalAmount | currency}}</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Customer</h3>
+          <dl>
+            <dt>Name</dt>
+            <dd>{{order.customer.firstName}} {{order.customer.lastName}}</dd>
+            <dt>City</dt>
+            <dd>{{order.customer.city}}</dd>
+            <dt>Country</dt>
+            <dd>{{order.customer.country}}</dd>
+            <dt>Phone</dt>
+            <dd>{{order.customer.phone}}</dd>
+          </dl>
+        </section>
+      </div>
+    </p-panel>
+
+    <p-panel header="Order Items">
+      <p-table class="order-items" [value]="orderItems()" dataKey="id" size="small">
+        <ng-template #header>
+          <tr>
+            <th>Product</th>
+            <th>Package</th>
+            <th>Supplier</th>
+            <th class="number">Unit Price</th>
+            <th class="number">Quantity</th>
+            <th class="number">Total</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-item>
+          <tr>
+            <td>
+              {{item.product.productName}}
+              @if (item.product.isDiscontinued) {
+                <p-tag value="Discontinued" severity="warn" />
+              }
+            </td>
+            <td>{{item.product.package}}</td>
+            <td>{{item.product.supplier.companyName}}</td>
+            <td class="number">{{item.unitPrice | currency}}</td>
+            <td class="number">{{item.quantity}}</td>
+            <td class="number">{{lineTotal(item) | currency}}</td>
+          </tr>
+        </ng-template>
+        <ng-template #footer>
+          <tr>
+            <td colspan="5">Total</td>
+            <td class="number">{{order.totalAmount | currency}}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="6">This order has no items.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-panel>
+  </div>
+} @else {
+  <p-panel header="Order">
+    <p class="hint">{{ loading() ? 'Loading order...' : 'Order ' + id() + ' was not found.' }}</p>
+  </p-panel>
+}
+```
+Things to note:
+
+ - The "Customers" button at the top uses `routerLink` to go back to the customer page.  `routerLink` works on any
+   element, including an Optimus UI button
+ - The first panel's header shows the order number, and the panel shows the order's fields and the customer's
+   fields side by side, as two definition lists
+ - In the items table, the Unit Price is the order item's `unitPrice` - the price the customer paid - rather than
+   the product's current `unitPrice`.  Discontinued products get a "Discontinued" tag
+ - The `#footer` template adds a totals row at the bottom of the table
+ - Until the query returns, and if no order has that id, the page shows a single panel with a message instead
+
+### The styles
+
+Replace the contents of `order.component.css` with:
+```css
+.toolbar {
+  margin-bottom: 1rem;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 4rem;
+}
+
+h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+}
+
+dt {
+  color: var(--p-text-muted-color);
+}
+
+dd {
+  margin: 0;
+}
+
+.number {
+  text-align: right;
+}
+
+.hint {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+td p-tag {
+  margin-left: 0.5rem;
+}
+```
+The `dl` grid puts each label (`dt`) beside its value (`dd`).
+
+### Add the route
+
+Edit `app.routes.ts`, import the `OrderComponent`, and add a route for it before the `**` route:
+```ts
+import { OrderComponent } from './order/order.component';
+...
+  {
+    path: 'orders/:id',
+    component: OrderComponent,
+  },
+```
+The `:id` in the path is a route parameter.  To have the router pass it to the component's `id` input, turn on
+**component input binding** in `app.config.ts`.  Change the router import and the `provideRouter` call to:
+```ts
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+...
+    provideRouter(routes, withComponentInputBinding()),
+```
+Without it, the component would have to inject `ActivatedRoute` and read the parameter itself.
+
+### Link to the order from the customer page
+
+In `customer.component.html`, change the order number cell of the orders table into a link:
+```html
+          <td><a [routerLink]="['/orders', order.id]">{{order.orderNumber}}</a></td>
+```
+and in `customer.component.ts`, import `RouterLink` and add it to the component's `imports` array:
+```ts
+import { RouterLink } from '@angular/router';
+...
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+```
+
+Last, give links the theme's primary colour by adding this to `src/styles.css`:
+```css
+a {
+  color: var(--p-primary-color);
+}
+```
+
+Try it: select a customer, click one of the order numbers, and you should see the order page.  Click "Customers" to
+go back.
+
+## Protect unsaved changes
+
+There is a problem with the new page.  Each page has its own EntityManager, so when we go from the customer page
+to an order, the customer page - and its EntityManager, with any unsaved changes - is thrown away.  Coming back
+creates a fresh one, which queries the customers again.
+
+So before the user leaves the customer page with unsaved changes, we'll ask them, in a popup dialog, whether to
+discard the changes or stay on the page.  Angular has a hook for exactly this: a **`CanDeactivate` guard**, which
+the router calls before leaving a route.  It can allow the navigation or cancel it, and it can take its time
+deciding, by returning a promise.  We'll show the dialog with the Optimus UI **ConfirmDialog** component.
+
+### Add the confirm dialog
+
+A ConfirmDialog is opened through the `ConfirmationService`.  Since any page might need it, we'll put one dialog in
+the app shell and provide the service for the whole app.
+
+In `app.config.ts`, import the service:
+```ts
+import { ConfirmationService } from '@openng/optimus-ui/api';
+```
+and add it to the `providers`, after `provideOptimus`:
+```ts
+    // Used to open the p-confirmdialog in app.html
+    ConfirmationService,
+```
+
+Add the dialog at the end of `app.html`:
+```html
+<h1>Northwind</h1>
+<router-outlet></router-outlet>
+<p-confirmdialog />
+```
+and import its module in `app.ts`:
+```ts
+import { ConfirmDialogModule } from '@openng/optimus-ui/confirmdialog';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet, ConfirmDialogModule],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+```
+
+### Create the guard
+
+Create the file `src/app/unsaved-changes.guard.ts`:
+```ts
+import { inject } from '@angular/core';
+import { CanDeactivateFn } from '@angular/router';
+import { ConfirmationService } from '@openng/optimus-ui/api';
+
+/** A routed component whose EntityManager may hold changes that have not been saved. */
+export interface HasUnsavedChanges {
+  hasUnsavedChanges(): boolean;
+}
+
+/**
+ * Before leaving a route, ask the user whether to discard unsaved changes.
+ * Discarding lets the navigation proceed; the component's EntityManager, and its
+ * changes, go away with the component.  Cancelling (or closing the dialog) stays put.
+ */
+export const unsavedChangesGuard: CanDeactivateFn<HasUnsavedChanges> = component => {
+  if (!component.hasUnsavedChanges()) {
+    return true;
+  }
+  const confirmationService = inject(ConfirmationService);
+  return new Promise<boolean>(resolve => {
+    confirmationService.confirm({
+      header: 'Unsaved Changes',
+      message: 'You have changes that have not been saved. Do you want to discard them?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonProps: { label: 'Discard Changes', severity: 'danger' },
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      accept: () => resolve(true),
+      reject: () => resolve(false),
+    });
+  });
+};
+```
+The router passes the guard the component that is about to be left.  The guard doesn't know anything about
+customers: it works with any component that has a `hasUnsavedChanges()` method, described by the
+`HasUnsavedChanges` interface.
+
+If there are no changes, the guard returns `true` and the navigation goes ahead.  Otherwise it opens the dialog,
+and returns a promise that resolves when the user answers: `true` (leave) for "Discard Changes", or `false` (stay)
+for "Cancel".  The ConfirmDialog also calls `reject` when the user closes the dialog with its close button or the
+Escape key, so those count as "Cancel".
+
+The guard doesn't need to call `rejectChanges()` to discard the changes: once the user leaves, the component and
+its EntityManager are destroyed, and the changes with them.
+
+### Use the guard
+
+In `app.routes.ts`, import the guard and add it to the `customers` route:
+```ts
+import { unsavedChangesGuard } from './unsaved-changes.guard';
+...
+  {
+    path: 'customers',
+    component: CustomerComponent,
+    canDeactivate: [unsavedChangesGuard],
+  },
+```
+The order page has nothing to save, so it doesn't need the guard.
+
+Then make the `CustomerComponent` implement the interface.  In `customer.component.ts`, import it:
+```ts
+import { HasUnsavedChanges } from '../unsaved-changes.guard';
+```
+add it to the class declaration:
+```ts
+export class CustomerComponent implements OnInit, HasUnsavedChanges {
+```
+and add the method, which simply asks the EntityManager:
+```ts
+  // Checked by unsavedChangesGuard before the router leaves this page
+  hasUnsavedChanges() {
+    return this.manager.hasChanges();
+  }
+```
+
+### Reloading and closing the tab
+
+The router only knows about navigation inside the app.  If the user reloads the page, closes the tab, or goes to
+another site, the changes would still be lost without warning.  Browsers don't allow a custom dialog in that
+situation, but they will show their own "Leave site?" prompt if the page cancels the `beforeunload` event.
+
+In `customer.component.ts`, add a `host` listener to the `@Component` decorator:
+```ts
+@Component({
+  selector: 'app-customer',
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  templateUrl: './customer.component.html',
+  styleUrl: './customer.component.css',
+  host: {
+    '(window:beforeunload)': 'onBeforeUnload($event)',
+  },
+})
+```
+and the method it calls:
+```ts
+  // The router can't stop the browser from reloading or closing the tab, so ask
+  // the browser to show its own "leave site?" prompt instead.
+  onBeforeUnload(event: BeforeUnloadEvent) {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
+  }
+```
+The `host` property is the current way to listen to events on the component's host element, or, with the
+`window:` prefix, on the window.  It replaces the `@HostListener` decorator.
+
+### Try it out
+
+Edit a customer, then click one of the order numbers.  You should see the "Unsaved Changes" dialog.  Click
+"Cancel", and you stay on the customer page with your changes intact.  Click the order number again and choose
+"Discard Changes", and the order page opens.  Back on the customer page, the changes are gone.
+
+With unsaved changes, try reloading the page too: the browser asks whether you want to leave.
+
 ## A note on unit tests
 
-`ng test` runs [Vitest](https://vitest.dev) against a jsdom browser.  Four things are worth knowing if you
-write component tests against Breeze:
+`ng test` runs [Vitest](https://vitest.dev) against a jsdom browser.  These things are worth knowing if you
+write component tests against Breeze and Optimus UI.  The sample's spec files - `customer.component.spec.ts`,
+`order.component.spec.ts` and `unsaved-changes.guard.spec.ts` - show each of them in use.
 
 - **The app initializer does not run in a component test**, so configure Breeze yourself in `beforeEach`, after
   `TestBed.configureTestingModule`.  Passing the test's `HttpClient` points Breeze at the
@@ -932,14 +1517,29 @@ write component tests against Breeze:
 - **Breeze registers an entity class with a single MetadataStore.**  Creating a fresh
   `EntityManagerProvider` in every `beforeEach` will fail on the second test, because `registerModelClasses`
   would attach the same classes to a second store.  Share one provider across the spec file and let
-  `newManager()` give each test its own EntityManager.
+  `newManager()` give each test its own EntityManager.  (Each spec file gets its own copy of the classes, so
+  each file can have its own shared provider.)
 - **In a zoneless test, `fixture.whenStable()` does not wait for Breeze's promises.**  Angular only knows
   about its own scheduler, so after flushing a mocked response you need to yield to the task queue
   (`await new Promise(resolve => setTimeout(resolve, 0))`) and then call `fixture.detectChanges()` before
   asserting against the DOM.  This applies only to tests; the running application repaints on its own.
-- **`<p-table>` renders its header row inside the same `<table>` as the data rows.**  To find the customer
-  rows in a test, query `table tbody tr` rather than `table tr`.  Clicking one of those rows selects it through
-  the table, just as it does in the browser, so a test can select a customer and then edit the form.
+- **`<p-table>` renders its header row inside the same `<table>` as the data rows**, and the customer page
+  has two tables.  To find the customer rows in a test, query `.customers tbody tr` (using the class we gave the
+  table) rather than `table tr`.  Clicking one of those rows selects it through the table, just as it does in
+  the browser, so a test can select a customer and then edit the form.
+- **Selecting a customer sends a request for its orders.**  `HttpTestingController.verify()` fails a test that
+  leaves a request unanswered, so a test that selects a customer must answer it, for example with
+  `httpMock.expectOne(r => r.url.startsWith('http://localhost:4000/api/breeze/Orders')).flush([])`.
+- **Breeze sends the server's property names.**  To check the order page's query, look for
+  `{"where":{"Id":11},"expand":["Customer","OrderItems.Product.Supplier"]}` in the request URL - not the
+  camel-cased names used in the component.
+- **Components with a `routerLink` need a router.**  Add `provideRouter([])` to the test's providers.
+- **Route parameters are inputs.**  The router isn't involved in a component test, so set the order id with
+  `fixture.componentRef.setInput('id', '11')` before the first change detection.
+- **The confirm dialog needs `ConfirmationService`.**  Provide it in any test that renders `App`, which contains
+  the `<p-confirmdialog>`.  To test a guard on its own, call it inside `TestBed.runInInjectionContext()` so that it
+  can `inject()` the service.  The dialog is attached to the document body, so look for its buttons in
+  `document`, not in the fixture.
 
 ## What's different from the Breeze 2 version
 
@@ -958,9 +1558,11 @@ write component tests against Breeze:
 | Angular HTTP integration | `breeze-client/adapter-ajax-httpclient` | `breeze-client/adapter-angular-httpclient` |
 | Default naming convention | `none` | `camelCase` |
 
-The Angular parts of the app - routing, environments, the component, and the query/save calls - are
-unchanged.  The one Angular addition is the Optimus UI interface, which is new in this version and has nothing
-to do with the Breeze upgrade: the Breeze 2 app still uses the plain HTML template.  For every change between Breeze 2 and Breeze 3, see the
+The Angular parts that both apps share - routing, environments, the customer component, and the query/save
+calls - are unchanged.  Everything from the Optimus UI section on is new in this version and has nothing to do
+with the Breeze upgrade: the Optimus UI interface, the orders panel, the order page and the unsaved-changes
+guard.  The Breeze 2 app still has the plain HTML customer page only.  For every change between Breeze 2 and
+Breeze 3, see the
 [upgrade guide](https://github.com/Breeze/breeze-client-v3/blob/main/UPGRADE.md).
 
 ## Conclusion
@@ -971,7 +1573,9 @@ We've created an Angular + Breeze application from the ground up,
 using tools to create a simple entity model from the database for both the client and server parts of the application.
 
 We now have an application that can create, read, update, and delete data, with a UI built from Optimus UI
-components.  It's ready to be extended to cover more entity types and more complex use cases.
+components.  It loads related entities both on demand and all at once with `expand`, moves between pages with the
+router, and won't let the user lose unsaved changes by accident.  It's ready to be extended to cover more entity
+types and more complex use cases.
 <hr>
 If you have problems with this demo, please create issues in this github repo.
 

@@ -1,6 +1,7 @@
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { configureBreeze } from 'breeze-client';
 import { httpClientFetch } from 'breeze-client/adapter-angular-httpclient';
@@ -28,6 +29,7 @@ describe('CustomerComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: EntityManagerProvider, useFactory: getSharedProvider },
       ],
     }).compileComponents();
@@ -75,16 +77,19 @@ describe('CustomerComponent', () => {
   });
 
   it('should render a row per customer', () => {
-    const rows = fixture.nativeElement.querySelectorAll('table tbody tr') as NodeListOf<HTMLElement>;
+    const rows = fixture.nativeElement.querySelectorAll('.customers tbody tr') as NodeListOf<HTMLElement>;
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Maria Cartman');
     expect(rows[0].textContent).toContain('Unchanged');
   });
 
   it('should edit the selected customer through the form', async () => {
-    const row = fixture.nativeElement.querySelector('table tbody tr') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('.customers tbody tr') as HTMLElement;
     row.click();
     fixture.detectChanges();
+
+    // Selecting the customer queries its orders
+    httpMock.expectOne(r => r.url.startsWith('http://localhost:4000/api/breeze/Orders')).flush([]);
 
     // ngModel writes the initial input value asynchronously
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -103,6 +108,66 @@ describe('CustomerComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Save Changes');
   });
 
+  it('should show the orders of the selected customer', async () => {
+    const cust = component.customers()[0];
+    component.select(cust);
+    fixture.detectChanges();
+    expect(component.ordersLoading()).toBe(true);
+
+    const req = httpMock.expectOne(r => r.url.startsWith('http://localhost:4000/api/breeze/Orders'));
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      {
+        $id: '1',
+        $type: 'NorthwindModel.Models.Order, NorthwindModel',
+        Id: 10, CustomerId: 1, OrderNumber: '542378', OrderDate: '2012-07-04T00:00:00', TotalAmount: 440
+      },
+      {
+        $id: '2',
+        $type: 'NorthwindModel.Models.Order, NorthwindModel',
+        Id: 11, CustomerId: 1, OrderNumber: '542379', OrderDate: '2012-07-05T00:00:00', TotalAmount: 1863.4
+      }
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    fixture.detectChanges();
+
+    expect(component.ordersLoading()).toBe(false);
+    expect(component.orders().map(o => o.orderNumber)).toEqual(['542378', '542379']);
+    const rows = fixture.nativeElement.querySelectorAll('.orders tbody tr') as NodeListOf<HTMLElement>;
+    expect(rows.length).toBe(2);
+    expect(rows[1].textContent).toContain('542379');
+    expect(rows[1].textContent).toContain('$1,863.40');
+    expect(fixture.nativeElement.textContent).toContain('Orders for Maria Cartman');
+
+    // Each order number links to the order page
+    const link = rows[1].querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent).toBe('542379');
+    expect(link.getAttribute('href')).toBe('/orders/11');
+
+    // Selecting the customer again uses the orders already in the cache
+    component.select(undefined);
+    component.select(cust);
+    httpMock.expectNone(r => r.url.startsWith('http://localhost:4000/api/breeze/Orders'));
+    expect(component.orders().length).toBe(2);
+  });
+
+  it('should report unsaved changes to the navigation guard', () => {
+    expect(component.hasUnsavedChanges()).toBe(false);
+    component.addCustomer();
+    expect(component.hasUnsavedChanges()).toBe(true);
+  });
+
+  it('should ask the browser to confirm a reload only when there are changes', () => {
+    const clean = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(clean);
+    expect(clean.defaultPrevented).toBe(false);
+
+    component.addCustomer();
+    const dirty = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(dirty);
+    expect(dirty.defaultPrevented).toBe(true);
+  });
+
   it('should add a customer', () => {
     component.addCustomer();
     fixture.detectChanges();
@@ -110,7 +175,7 @@ describe('CustomerComponent', () => {
     expect(component.customers().length).toBe(2);
     expect(component.selected()).toBe(component.customers()[1]);
     expect(component.manager.hasChanges()).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('table tbody tr').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.customers tbody tr').length).toBe(2);
   });
 
   it('should mark a customer deleted', () => {

@@ -1,7 +1,7 @@
 <div class="layout">
   <p-panel header="Customers">
-    <p-table [value]="customers()" dataKey="id" selectionMode="single"
-      [selection]="selected()" (selectionChange)="selected.set($event ?? undefined)"
+    <p-table class="customers" [value]="customers()" dataKey="id" selectionMode="single"
+      [selection]="selected()" (selectionChange)="select($event ?? undefined)"
       size="small" [rowHover]="true">
       <ng-template #header>
         <tr>
@@ -78,5 +78,29 @@
           [disabled]="!canDelete()" (onClick)="delete(selected()!)" />
       </div>
     </ng-template>
+  </p-panel>
+
+  <p-panel class="orders-panel" [header]="ordersHeader()">
+    <p-table class="orders" [value]="orders()" [loading]="ordersLoading()" dataKey="id" size="small">
+      <ng-template #header>
+        <tr>
+          <th>Order Number</th>
+          <th>Order Date</th>
+          <th class="amount">Total Amount</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-order>
+        <tr>
+          <td><a [routerLink]="['/orders', order.id]">{{order.orderNumber}}</a></td>
+          <td>{{order.orderDate | date}}</td>
+          <td class="amount">{{order.totalAmount | currency}}</td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="3">{{ selected() ? 'No orders.' : 'Select a customer to see their orders.' }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
   </p-panel>
 </div>

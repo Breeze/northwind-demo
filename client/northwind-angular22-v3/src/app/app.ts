@@ -1,9 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ConfirmDialogModule } from '@openng/optimus-ui/confirmdialog';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ConfirmDialogModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
