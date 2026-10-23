@@ -13,7 +13,8 @@ Along the way we will:
 - Create an Angular application using the CLI
 - Create TypeScript entity classes from the server metadata
 - Create an Angular component to read and update entities
-- Give the component a polished UI with the [Optimus UI](https://optimus.openng.org) component library
+- Give the component a polished UI with the [Optimus UI](https://optimus.openng.org) component library, with
+  server-side paging, sorting and searching of the customer list
 - Show each customer's orders, loading them on demand through a navigation property
 - Create a second page, reached by a route with a parameter, that shows an order with its related entities
 - Protect unsaved changes with a route guard and a confirmation dialog
@@ -403,6 +404,7 @@ Then add an `ngOnInit` method that performs a Breeze query:
   }
 ```
 Note that, to keep the display size small, we've limited the results to just those customers whose `lastName` starts with "C".
+(Later, when we improve the UI, we'll replace this with paging.)
 
 > **Zoneless Angular needs signals here.**  With no zone.js, a plain field assignment like
 > `this.customers = qr.results` would update the data but never repaint the screen.  Holding the list in a
@@ -593,7 +595,7 @@ zoneless app.
 ### Test the editing
 
 Now you should be able to add a new Customer, edit the properties of new and existing customers, delete customers, and save
-the changes in a batch.  (Remember that we only query customers where lastName starts with "C").
+the changes in a batch.  (Remember that we only query customers where lastName starts with "C", for now).
 
 If you open your browser's developer tools (F12), you can see the network traffic between the Breeze client and the server API
 as queries and saves are sent.
@@ -608,8 +610,14 @@ done, the screen will have two panels side by side:
    and Add, Save Changes and Revert Changes buttons in its footer
  - An **Edit Customer** panel holding the editing form, with a Delete button in its footer
 
-None of the Breeze code changes.  The component class gets two small helper methods, and the template is
-rewritten to use Optimus UI components.
+We'll also stop limiting the list to customers whose last name starts with "C".  Instead, the table will show
+all of the customers **a page at a time**, with **sortable columns** and a **search box**.  The paging, sorting
+and searching all happen on the server: each time the user changes page, sorts or searches, we send a Breeze
+query for just the customers on that page.  That's what lets the same code handle a table of 90 customers or 90
+million.
+
+The editing code - add, delete, save and revert - stays almost the same.  The query in `ngOnInit` is replaced by
+a paged query, and the template is rewritten to use Optimus UI components.
 
 _Optimus UI documentation, including an LLM-friendly version at
 [optimus.openng.org/llms/llms.txt](https://optimus.openng.org/llms/llms.txt), is at
@@ -677,8 +685,8 @@ declares that the page supports both colour schemes.
 
 ### Raise the bundle budget
 
-Optimus UI's Table is a large component, and with it the initial bundle grows to about 1.25 MB (250 kB
-compressed).  That is over the 1 MB limit the CLI sets on a new app, so `ng build` would fail.  For this demo we
+Optimus UI's Table is a large component, and with it the initial bundle grows to about 1.3 MB (270 kB
+compressed) by the end of this walkthrough.  That is over the 1 MB limit the CLI sets on a new app, so `ng build` would fail.  For this demo we
 simply raise the limit.  In `angular.json`, find the `budgets` in the `production` configuration and change the
 `initial` budget:
 ```json
@@ -695,23 +703,227 @@ Each Optimus UI component is imported on its own, so you only include what you u
 `customer.component.ts` and add these imports:
 ```ts
 import { ButtonModule } from '@openng/optimus-ui/button';
+import { IconFieldModule } from '@openng/optimus-ui/iconfield';
 import { IftaLabelModule } from '@openng/optimus-ui/iftalabel';
+import { InputIconModule } from '@openng/optimus-ui/inputicon';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { PanelModule } from '@openng/optimus-ui/panel';
-import { TableModule } from '@openng/optimus-ui/table';
+import { TableLazyLoadEvent, TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 ```
-Then add them to the component's `imports` array, next to `FormsModule`:
+Then add the modules to the component's `imports` array, next to `FormsModule`:
 ```ts
 @Component({
   selector: 'app-customer',
-  imports: [FormsModule, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  imports: [FormsModule, ButtonModule, IconFieldModule, IftaLabelModule, InputIconModule, InputTextModule, PanelModule, TableModule, TagModule],
   templateUrl: './customer.component.html',
   styleUrl: './customer.component.css',
 })
 ```
+`TableLazyLoadEvent` isn't a module; it's the type of the event the table sends when it needs a page of data,
+which we'll use below.
 
-Also add two helper methods to the class, after `rejectChanges`:
+We'll need two more Breeze classes too, so change the `breeze-client` import to:
+```ts
+import { EntityQuery, EntityState, Predicate } from 'breeze-client';
+```
+
+### Load the customers a page at a time
+
+The table will tell us which page of customers to show, sorted and filtered how, by sending a **lazy load
+event**: once when it first appears, and again whenever the user changes the page, the page size, the sort
+column, or the search text.  So we no longer query the customers in `ngOnInit`.  Delete the `ngOnInit` method,
+and remove `OnInit` from the `@angular/core` import and from the class declaration, which becomes:
+```ts
+export class CustomerComponent {
+```
+
+Add signals to hold the table's paging, sorting and searching state, after the `selected` signal:
+```ts
+  // Paging state for the customer table
+  readonly first = signal(0);
+  readonly rows = signal(10);
+  readonly totalRecords = signal(0);
+  readonly customersLoading = signal(false);
+  private pageRequest = 0;
+
+  // Sorting and filtering state for the customer table
+  readonly sortField = signal('lastName');
+  readonly sortOrder = signal(1);  // 1 = ascending, -1 = descending
+  readonly searchText = signal('');
+```
+`first` is the index of the first customer on the page, `rows` is the page size, and `totalRecords` is how many
+customers match in all, which the paginator needs to show how many pages there are.
+
+Then add the method that the table calls with its lazy load event.  It copies the event into the signals and
+runs the query:
+```ts
+  // Called by the table when it first displays, and whenever the user changes the page,
+  // the page size, the sort column, or the search text
+  loadPage(event: TableLazyLoadEvent) {
+    this.first.set(event.first ?? 0);
+    this.rows.set(event.rows ?? this.rows());
+    this.sortField.set(typeof event.sortField === 'string' ? event.sortField : 'lastName');
+    this.sortOrder.set(event.sortOrder ?? 1);
+    this.searchText.set(typeof event.globalFilter === 'string' ? event.globalFilter.trim() : '');
+    this.queryCustomers();
+  }
+```
+
+And the query itself:
+```ts
+  // Query one page of customers, and the total number of matching customers for the paginator
+  private queryCustomers() {
+    const request = ++this.pageRequest;
+    const query = this.sortQuery(new EntityQuery('Customers'))
+      .where(this.searchPredicate())
+      .skip(this.first())
+      .take(this.rows())
+      .inlineCount();
+    this.customersLoading.set(true);
+    this.manager.executeQuery(query).then(qr => {
+      if (request !== this.pageRequest) {
+        return; // the user has already asked for another page
+      }
+      const total = qr.inlineCount ?? 0;
+      if (qr.results.length === 0 && this.first() > 0 && total > 0) {
+        // The page is past the end, e.g. after deleting the last customers; show the last page instead
+        this.first.set(Math.floor((total - 1) / this.rows()) * this.rows());
+        this.queryCustomers();
+        return;
+      }
+      this.totalRecords.set(total);
+      // New customers aren't on the server yet, so show them at the top of every page until they are saved
+      this.customers.set([...this.addedCustomers(), ...qr.results]);
+    }).finally(() => {
+      if (request === this.pageRequest) {
+        this.customersLoading.set(false);
+      }
+    });
+  }
+```
+This is where the paging happens:
+
+ - **`skip` and `take`** ask the server for just one page: skip the customers on the earlier pages, and take one
+   page's worth
+ - **`inlineCount()`** asks the server to also send the total number of customers that match the query, ignoring
+   `skip` and `take`.  It comes back as `qr.inlineCount`, and goes to the paginator through `totalRecords`
+ - The user can click through pages faster than the server answers.  Each query gets a number, `request`, and a
+   result is ignored if a newer query has been sent since, so an old page can never replace a newer one
+ - If the page is past the end - say the user deleted every customer on the last page, then saved - we show the new
+   last page instead of an empty one
+
+We also have to think about **new customers**.  A customer the user has added but not saved doesn't exist on the
+server yet, so no page query will return it.  `addedCustomers()` gets them from the EntityManager's cache, and we
+show them at the top of every page until they're saved:
+```ts
+  private addedCustomers() {
+    return this.manager.getEntities('Customer', EntityState.Added) as Customer[];
+  }
+```
+
+#### Sorting
+
+Add the method that applies the sort order:
+```ts
+  // Sort by the chosen column, then by name and id, so that every customer has a fixed
+  // place in the order and pages never overlap or skip anyone
+  private sortQuery(query: EntityQuery) {
+    const descending = this.sortOrder() === -1;
+    const byName = ['lastName', 'firstName', 'id'];
+    const field = this.sortField();
+    return field === 'lastName'
+      ? query.orderBy(byName, descending)
+      : query.orderBy(field, descending).orderBy(byName);
+  }
+```
+The table tells us which column to sort by (`sortField`) and in which direction (`sortOrder`).  Paging needs more
+than that, though.  Many customers live in the same city, so if we sorted only by city, the database would be free
+to return customers from the same city in a different order each time - and a customer could then show up on two
+pages, or on none.  So we always finish the sort with last name, first name and `id`.  The `id` is unique, so every
+customer has exactly one place in the order.
+
+When the sort column is the name itself, `orderBy(byName, descending)` sorts all three in the chosen direction.
+For any other column, we sort by that column, then by name.  Calling `orderBy` twice adds the second sort to the
+first, so Breeze sends the server a single sort, such as `["City desc", "LastName", "FirstName", "Id"]`.
+
+#### Searching
+
+Add the method that turns the search text into a Breeze `Predicate`, the condition for the query's `where`:
+```ts
+  // Each word of the search text must appear in the first name, last name, city or country
+  private searchPredicate() {
+    const words = this.searchText().split(/\s+/).filter(w => w);
+    if (words.length === 0) {
+      return undefined;
+    }
+    const fields = ['firstName', 'lastName', 'city', 'country'];
+    return Predicate.and(words.map(word =>
+      Predicate.or(fields.map(field => Predicate.create(field, 'contains', word)))));
+  }
+```
+For each word, `Predicate.or` matches customers who have the word in any of the four fields.  `Predicate.and`
+then requires every word to match, so a search for "maria berlin" finds Maria Anders of Berlin, but not every Maria
+and every Berliner.  With no search text there is no predicate, and `where(undefined)` leaves the query
+unfiltered.
+
+The server runs the `contains` comparisons in the database, so whether they ignore case and accents depends on the
+database's collation.
+
+#### Adding, saving and reverting
+
+The editing methods need some changes now that the list is a page from the server.
+
+Add new customers at the top of the list, where the query puts them, rather than at the end.  Change the last line of
+`addCustomer` to:
+```ts
+    this.customers.update(customers => [cust, ...customers]);
+```
+
+Replace `saveChanges` and `rejectChanges` with:
+```ts
+  saveChanges() {
+    this.manager.saveChanges().then(() => {
+      this.deselectIfDetached();
+      // re-query the page, since saved customers now have their place in the sort order,
+      // and deleted customers are gone
+      this.queryCustomers();
+    });
+  }
+
+  rejectChanges() {
+    this.manager.rejectChanges();
+    this.deselectIfDetached();
+    // rejecting removes new customers from the cache; the rest of the page is still correct
+    this.customers.update(customers => customers.filter(c => !c.entityAspect.entityState.isDetached()));
+  }
+
+  // A deleted customer that has been saved, or a new customer that has been rejected,
+  // is no longer in the cache, so it can't stay selected
+  private deselectIfDetached() {
+    if (this.selected()?.entityAspect.entityState.isDetached()) {
+      this.selected.set(undefined);
+    }
+  }
+```
+Before, both methods refreshed the list with `manager.getEntities('Customer')`.  That would now show every customer
+in the cache, from every page the user has visited.  Instead:
+
+ - After a save, we query the page again.  Saved customers move to their place in the sort order, and deleted ones
+   disappear
+ - After a revert, nothing on the server has changed, so we don't need to ask it again.  `rejectChanges()`
+   restores modified and deleted customers in place, and *detaches* new ones - removes them from the cache - so we
+   just drop the detached ones from the page
+ - In both cases, a customer that is no longer in the cache can't stay selected
+
+What about changes on other pages?  They aren't lost when the user moves to another page.  The EntityManager keeps
+every customer it has queried, and when a query returns a customer the user has changed, Breeze keeps the changed
+copy from its cache rather than the server's.  So the user can edit customers on several pages, and save them all
+at once.
+
+#### Helper methods
+
+Last, add two helper methods at the end of the class:
 ```ts
   canDelete() {
     const cust = this.selected();
@@ -737,14 +949,27 @@ afterwards.
 ```html
 <div class="layout">
   <p-panel header="Customers">
-    <p-table [value]="customers()" dataKey="id" selectionMode="single"
+    <p-table #customerTable [value]="customers()" dataKey="id" selectionMode="single"
       [selection]="selected()" (selectionChange)="selected.set($event ?? undefined)"
+      [lazy]="true" (onLazyLoad)="loadPage($event)" [loading]="customersLoading()"
+      [paginator]="true" [first]="first()" [rows]="rows()" [totalRecords]="totalRecords()"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords}"
+      sortField="lastName" [sortOrder]="1"
       size="small" [rowHover]="true">
+      <ng-template #caption>
+        <p-iconfield>
+          <p-inputicon class="pi pi-search" />
+          <input pInputText type="search" name="search" placeholder="Search name, city or country"
+            aria-label="Search customers" autocomplete="off" fluid
+            (input)="customerTable.filterGlobal($any($event.target).value, 'contains')" />
+        </p-iconfield>
+      </ng-template>
       <ng-template #header>
         <tr>
-          <th>Name</th>
-          <th>City</th>
-          <th>Country</th>
+          <th pSortableColumn="lastName">Name <p-sortIcon field="lastName" /></th>
+          <th pSortableColumn="city">City <p-sortIcon field="city" /></th>
+          <th pSortableColumn="country">Country <p-sortIcon field="country" /></th>
           <th>State</th>
         </tr>
       </ng-template>
@@ -760,7 +985,7 @@ afterwards.
       </ng-template>
       <ng-template #emptymessage>
         <tr>
-          <td colspan="4">No customers found.</td>
+          <td colspan="4">{{ searchText() ? 'No customers match "' + searchText() + '".' : 'No customers found.' }}</td>
         </tr>
       </ng-template>
     </p-table>
@@ -829,7 +1054,8 @@ We've also dropped the "customer works!" line.
 
 `<p-table>` replaces our `@for` loop.  It takes the list in `[value]`, and renders it with two templates:
 `#header` for the column headings, and `#body` for one row, which receives each customer as `let-cust`.  The
-`#emptymessage` template is shown when the list is empty.
+`#emptymessage` template is shown when the list is empty, and says so differently when it's empty because nothing
+matched the search.
 
 Selection is now handled by the table instead of our own `(click)` handler and background-colour binding:
 
@@ -846,6 +1072,46 @@ Selection is now handled by the table instead of our own `(click)` handler and b
 `size="small"` makes the rows more compact, and `[rowHover]="true"` highlights the row under the mouse.
 
 The entity state column now uses `<p-tag>`, a small coloured label, with the colour from `stateSeverity`.
+
+#### Paging
+
+Normally a table is given all of its data and pages, sorts and filters it in the browser.  **`[lazy]="true"`**
+changes that: the table shows exactly what is in `[value]`, and whenever it needs different data it sends an
+**`(onLazyLoad)`** event instead, which we pass to `loadPage`.  The event carries the page position, the sort, and
+the search text.  The table sends the first one as soon as it appears, so the first page loads without any help
+from `ngOnInit`.
+
+ - `[paginator]="true"` shows the paginator below the table
+ - `[first]`, `[rows]` and `[totalRecords]` tell the paginator which page we're on, the page size, and how many
+   customers there are in all.  The table can't count them itself, since it only ever has one page
+ - `[rowsPerPageOptions]` adds a dropdown for choosing the page size
+ - `[showCurrentPageReport]` and `currentPageReportTemplate` show a summary such as "11 to 20 of 91"
+ - `[loading]` shows a spinner over the table while a page is loading
+
+#### Sorting
+
+`pSortableColumn` makes a column heading clickable, and its value is the name the table sends as `sortField` in
+the lazy load event, here the entity property to sort by.  Clicking a heading sorts by that column; clicking it
+again reverses the order.  `<p-sortIcon>` shows the arrow, and the table marks the heading with `aria-sort` for
+screen readers.  The State column isn't sortable: an entity's state only exists in the browser, so the server
+can't sort by it.
+
+`sortField="lastName"` and `[sortOrder]="1"` on the table set the initial sort, so the Name column shows its
+arrow from the start.
+
+#### Searching
+
+The `#caption` template puts the search box above the table.  `<p-iconfield>` and `<p-inputicon>` add the search
+icon inside the input.
+
+`#customerTable` gives the table a name in the template, so the input can call **`customerTable.filterGlobal()`**
+on each keystroke.  `filterGlobal` filters on all columns at once, and in lazy mode that means it sends a lazy load
+event, with the text as `globalFilter`, for `loadPage` to turn into a query.  The table waits until the user has
+stopped typing for 300 ms before it does, so we don't query the server on every keystroke.  Filtering and sorting
+both go back to the first page.
+
+(`$any($event.target).value` gets the text out of the input event.  `$event.target` is typed as a plain
+`EventTarget`, which has no `value`, so `$any` tells the template compiler not to check it.)
 
 #### The form
 
@@ -914,9 +1180,16 @@ _The Optimus UI examples use [Tailwind CSS](https://optimus.openng.org/tailwind)
 
 ### Try it out
 
-Run `ng serve --open` again, with the server running.  You should see the Customers and Edit Customer panels.
-Everything works as before: click a row to select a customer, edit it in the form, and watch its state tag
-change from Unchanged to Modified.  Add, delete, save and revert all work the same way.
+Run `ng serve --open` again, with the server running.  You should see the Customers and Edit Customer panels, with
+the first 10 customers sorted by name, and "1 to 10 of 91" in the paginator.
+
+ - Page through the customers, and change the page size.  In the browser's network tab, you'll see a query for
+   each page, with `skip`, `take` and `inlineCount`
+ - Click the City heading to sort by city, and again to reverse it
+ - Type "ger" in the search box: you'll get the 12 customers with "ger" in their name, city or country.  Then try
+   "maria berlin"
+ - Click a row to select a customer, edit it in the form, and watch its state tag change from Unchanged to
+   Modified.  Move to another page and back: the change is still there.  Add, delete, save and revert as before
 
 ## Show the customer's orders
 
@@ -942,7 +1215,7 @@ import { Order } from '../model/order';
 ```
 and add `CurrencyPipe` and `DatePipe` to the component's `imports` array:
 ```ts
-  imports: [CurrencyPipe, DatePipe, FormsModule, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  imports: [CurrencyPipe, DatePipe, FormsModule, ButtonModule, IconFieldModule, IftaLabelModule, InputIconModule, InputTextModule, PanelModule, TableModule, TagModule],
 ```
 
 Add two signals, for the orders to display and for whether they are still loading:
@@ -995,6 +1268,11 @@ A few things to note:
 ```ts
     this.select(cust);
 ```
+and in `deselectIfDetached`, change `this.selected.set(undefined)` to:
+```ts
+      this.select(undefined);
+```
+so that the orders panel is cleared too.
 
 Finally, add a method for the title of the new panel:
 ```ts
@@ -1008,12 +1286,13 @@ The `?? ''` keeps "undefined" out of the title while a new customer's name is st
 ### Change the template
 
 In `customer.component.html`, change the customer table's `(selectionChange)` to call `select`.  While we're
-there, give the table a class, so that it is easy to tell apart from the orders table in unit tests:
+there, give the table a class, so that it is easy to tell apart from the orders table in unit tests.  The first two
+lines of the `<p-table>` tag become:
 ```html
-    <p-table class="customers" [value]="customers()" dataKey="id" selectionMode="single"
+    <p-table #customerTable class="customers" [value]="customers()" dataKey="id" selectionMode="single"
       [selection]="selected()" (selectionChange)="select($event ?? undefined)"
-      size="small" [rowHover]="true">
 ```
+and the rest of the tag stays the same.
 
 Then add a third panel, just before the closing `</div>` of the layout:
 ```html
@@ -1324,7 +1603,7 @@ and in `customer.component.ts`, import `RouterLink` and add it to the component'
 ```ts
 import { RouterLink } from '@angular/router';
 ...
-  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IconFieldModule, IftaLabelModule, InputIconModule, InputTextModule, PanelModule, TableModule, TagModule],
 ```
 
 Last, give links the theme's primary colour by adding this to `src/styles.css`:
@@ -1449,7 +1728,7 @@ import { HasUnsavedChanges } from '../unsaved-changes.guard';
 ```
 add it to the class declaration:
 ```ts
-export class CustomerComponent implements OnInit, HasUnsavedChanges {
+export class CustomerComponent implements HasUnsavedChanges {
 ```
 and add the method, which simply asks the EntityManager:
 ```ts
@@ -1469,7 +1748,7 @@ In `customer.component.ts`, add a `host` listener to the `@Component` decorator:
 ```ts
 @Component({
   selector: 'app-customer',
-  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IftaLabelModule, InputTextModule, PanelModule, TableModule, TagModule],
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink, ButtonModule, IconFieldModule, IftaLabelModule, InputIconModule, InputTextModule, PanelModule, TableModule, TagModule],
   templateUrl: './customer.component.html',
   styleUrl: './customer.component.css',
   host: {
@@ -1527,12 +1806,19 @@ write component tests against Breeze and Optimus UI.  The sample's spec files - 
   has two tables.  To find the customer rows in a test, query `.customers tbody tr` (using the class we gave the
   table) rather than `table tr`.  Clicking one of those rows selects it through the table, just as it does in
   the browser, so a test can select a customer and then edit the form.
+- **The customer table asks for its first page as soon as it is rendered.**  Every customer test has to answer
+  that query, and a query with `inlineCount()` expects the server's answer wrapped with the count, as
+  `{ Results: [...], InlineCount: 91 }`, rather than as a plain array.  The sample's spec has a helper,
+  `answerCustomersQuery`, that does both and returns the query URL for checking.
+- **The search box waits 300 ms before it asks for data.**  After typing into it, wait a little longer than that
+  (`await new Promise(resolve => setTimeout(resolve, 350))`) before expecting the query.
 - **Selecting a customer sends a request for its orders.**  `HttpTestingController.verify()` fails a test that
   leaves a request unanswered, so a test that selects a customer must answer it, for example with
   `httpMock.expectOne(r => r.url.startsWith('http://localhost:4000/api/breeze/Orders')).flush([])`.
-- **Breeze sends the server's property names.**  To check the order page's query, look for
-  `{"where":{"Id":11},"expand":["Customer","OrderItems.Product.Supplier"]}` in the request URL - not the
-  camel-cased names used in the component.
+- **Breeze sends the server's property names.**  To check a query, look for the names the server uses in the
+  request URL - not the camel-cased names used in the component.  For example, sorting by city sends
+  `"orderBy":["City","LastName","FirstName","Id"]`, and the order page sends
+  `{"where":{"Id":11},"expand":["Customer","OrderItems.Product.Supplier"]}`.
 - **Components with a `routerLink` need a router.**  Add `provideRouter([])` to the test's providers.
 - **Route parameters are inputs.**  The router isn't involved in a component test, so set the order id with
   `fixture.componentRef.setInput('id', '11')` before the first change detection.

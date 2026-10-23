@@ -1,13 +1,26 @@
 <div class="layout">
   <p-panel header="Customers">
-    <p-table class="customers" [value]="customers()" dataKey="id" selectionMode="single"
+    <p-table #customerTable class="customers" [value]="customers()" dataKey="id" selectionMode="single"
       [selection]="selected()" (selectionChange)="select($event ?? undefined)"
+      [lazy]="true" (onLazyLoad)="loadPage($event)" [loading]="customersLoading()"
+      [paginator]="true" [first]="first()" [rows]="rows()" [totalRecords]="totalRecords()"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      [showCurrentPageReport]="true" currentPageReportTemplate="{first} to {last} of {totalRecords}"
+      sortField="lastName" [sortOrder]="1"
       size="small" [rowHover]="true">
+      <ng-template #caption>
+        <p-iconfield>
+          <p-inputicon class="pi pi-search" />
+          <input pInputText type="search" name="search" placeholder="Search name, city or country"
+            aria-label="Search customers" autocomplete="off" fluid
+            (input)="customerTable.filterGlobal($any($event.target).value, 'contains')" />
+        </p-iconfield>
+      </ng-template>
       <ng-template #header>
         <tr>
-          <th>Name</th>
-          <th>City</th>
-          <th>Country</th>
+          <th pSortableColumn="lastName">Name <p-sortIcon field="lastName" /></th>
+          <th pSortableColumn="city">City <p-sortIcon field="city" /></th>
+          <th pSortableColumn="country">Country <p-sortIcon field="country" /></th>
           <th>State</th>
         </tr>
       </ng-template>
@@ -23,7 +36,7 @@
       </ng-template>
       <ng-template #emptymessage>
         <tr>
-          <td colspan="4">No customers found.</td>
+          <td colspan="4">{{ searchText() ? 'No customers match "' + searchText() + '".' : 'No customers found.' }}</td>
         </tr>
       </ng-template>
     </p-table>
