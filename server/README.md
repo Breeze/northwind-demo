@@ -2,7 +2,8 @@
 
 This folder has the sample server projects that work with any of the [client](../client) samples.
 
-See [STEPS-Server-NET10](STEPS-Server-NET10.md) for creating a .NET 10 server.
+See [STEPS-Server-NET10](STEPS-Server-NET10.md) for creating a .NET 10 server, and
+[STEPS-Server-NET10-MCP](STEPS-Server-NET10-MCP.md) for adding an MCP server to it, so AI assistants can query the data.
 
 See [STEPS-Server-NET5](STEPS-Server-NET5.md) for creating a .NET 5 server.
 

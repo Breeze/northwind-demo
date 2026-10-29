@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Serialization;
 using NorthwindModel.Models;
 using NorthwindServer;
+using NorthwindServer.Mcp;
+using ModelContextProtocol;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 if (args.Length > 0 && args[0].Contains("metadata"))
 {
@@ -28,11 +32,31 @@ builder.Services.AddControllers()
     // Add Breeze exception filter to send errors back to the client
     .AddMvcOptions(o => { o.Filters.Add(new GlobalExceptionFilter()); });
 
-builder.Services.AddCors();
+// Allow any origin - development only!
+// The policy is applied to the Breeze controller only, so web pages can't call the MCP endpoint.
+builder.Services.AddCors(options => options.AddPolicy("BreezeClient", policy => policy
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .SetIsOriginAllowed((host) => true)
+    .AllowCredentials()
+));
 
 // Add DbContext using connection string
 var connectionString = builder.Configuration.GetConnectionString("Northwind");
 builder.Services.AddDbContext<NorthwindContext>(options => options.UseSqlServer(connectionString));
+
+// MCP server, giving AI assistants read-only access to the data at /mcp.
+// The tools' results always include null values: by default they're left out, but the output schemas
+// describe every property as required, and clients reject results that don't match their schema.
+var mcpJsonOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions)
+{
+    DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+};
+builder.Services.AddMcpServer()
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<BreezeQueryTools>(mcpJsonOptions)
+    .WithTools<NorthwindTools>(mcpJsonOptions)
+    .WithResources<BreezeResources>();
 
 var app = builder.Build();
 
@@ -42,16 +66,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseCors();
 
-// Allow any host - development only!
-app.UseCors(policy => policy
-    .AllowAnyHeader()
-    .AllowAnyMethod()
-    .SetIsOriginAllowed((host) => true)
-    .AllowCredentials()
-);
-
-app.MapControllers();
+app.MapControllers().RequireCors("BreezeClient");
+app.MapMcp("/mcp");
 app.MapGet("/", () => "Hello World!");
 
 app.Run();
@@ -75,3 +93,6 @@ static void WriteMetadata()
     var metadata = persistenceManager.Metadata();
     Console.Out.WriteLine(metadata);
 }
+
+// Lets the integration tests start the app with WebApplicationFactory<Program>
+public partial class Program;
